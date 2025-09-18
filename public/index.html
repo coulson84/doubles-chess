@@ -20,14 +20,6 @@
             border-radius: 5px;
             margin: 10px 0;
         }
-        .connected {
-            background: #d4edda;
-            color: #155724;
-        }
-        .disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
         .controls {
             margin: 20px 0;
         }
@@ -62,19 +54,6 @@
 </head>
 <body>
     <h1>Chess Doubles</h1>
-
-    <div id="status" class="status disconnected">
-        Disconnected
-    </div>
-
-    <div class="controls">
-        <button onclick="connectWebSocket()">Connect</button>
-        <button onclick="testAPI()">Test API</button>
-        <button onclick="sendMessage()">Send Test Message</button>
-    </div>
-
-    <div id="messages"></div>
-
     <script src="/app.js"></script>
 </body>
 </html>
