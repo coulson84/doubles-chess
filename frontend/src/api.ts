@@ -1,18 +1,16 @@
-import { authManager } from './auth';
-
 const API_BASE_URL = '/api';
 
 class ApiService {
     private async fetch(url: string, options: RequestInit = {}): Promise<Response> {
         const headers = {
             'Content-Type': 'application/json',
-            ...authManager.getAuthHeaders(),
             ...options.headers
         };
 
         return fetch(`${API_BASE_URL}${url}`, {
             ...options,
-            headers
+            headers,
+            credentials: 'include' // Include cookies for authentication
         });
     }
 

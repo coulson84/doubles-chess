@@ -3,58 +3,23 @@ import type { User } from '../../shared/types.ts';
 interface AuthState {
     isAuthenticated: boolean;
     user: User | null;
-    token: string | null;
 }
 
 class AuthManager {
     private state: AuthState = {
         isAuthenticated: false,
-        user: null,
-        token: null
+        user: null
     };
 
     private listeners: ((state: AuthState) => void)[] = [];
 
     constructor() {
-        this.loadFromStorage();
-    }
-
-    private loadFromStorage(): void {
-        try {
-            const token = localStorage.getItem('chess_doubles_token');
-            const userStr = localStorage.getItem('chess_doubles_user');
-
-            if (token && userStr) {
-                const user = JSON.parse(userStr);
-                this.setState({
-                    isAuthenticated: true,
-                    user,
-                    token
-                });
-            }
-        } catch (error) {
-            console.error('Failed to load auth state from storage:', error);
-            this.clearStorage();
-        }
-    }
-
-    private saveToStorage(): void {
-        if (this.state.token && this.state.user) {
-            localStorage.setItem('chess_doubles_token', this.state.token);
-            localStorage.setItem('chess_doubles_user', JSON.stringify(this.state.user));
-        } else {
-            this.clearStorage();
-        }
-    }
-
-    private clearStorage(): void {
-        localStorage.removeItem('chess_doubles_token');
-        localStorage.removeItem('chess_doubles_user');
+        // Check auth status on initialization
+        this.checkAuthStatus();
     }
 
     private setState(newState: Partial<AuthState>): void {
         this.state = { ...this.state, ...newState };
-        this.saveToStorage();
         this.notifyListeners();
     }
 
@@ -83,6 +48,7 @@ class AuthManager {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include', // Include cookies
                 body: JSON.stringify({
                     emailOrUsername,
                     password
@@ -98,8 +64,7 @@ class AuthManager {
 
             this.setState({
                 isAuthenticated: true,
-                user: data.user,
-                token: data.token
+                user: data.user
             });
         } catch (error) {
             console.error('Login failed:', error);
@@ -114,6 +79,7 @@ class AuthManager {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include', // Include cookies
                 body: JSON.stringify({
                     email,
                     username,
@@ -130,8 +96,7 @@ class AuthManager {
 
             this.setState({
                 isAuthenticated: true,
-                user: data.user,
-                token: data.token
+                user: data.user
             });
         } catch (error) {
             console.error('Registration failed:', error);
@@ -147,22 +112,27 @@ class AuthManager {
     public async checkAuthStatus(): Promise<void> {
         try {
             const response = await fetch('/api/auth/me', {
-                headers: this.getAuthHeaders()
+                credentials: 'include' // Include cookies for authentication
             });
 
             if (response.ok) {
                 const data = await response.json();
                 this.setState({
                     isAuthenticated: true,
-                    user: data.user,
-                    token: this.state.token
+                    user: data.user
                 });
             } else {
-                this.logout();
+                this.setState({
+                    isAuthenticated: false,
+                    user: null
+                });
             }
         } catch (error) {
             console.error('Auth check failed:', error);
-            this.logout();
+            this.setState({
+                isAuthenticated: false,
+                user: null
+            });
         }
     }
 
@@ -170,28 +140,16 @@ class AuthManager {
         try {
             await fetch('/api/auth/logout', {
                 method: 'POST',
-                headers: this.getAuthHeaders()
+                credentials: 'include' // Include cookies
             });
         } catch (error) {
             console.error('Logout error:', error);
         }
 
-
         this.setState({
             isAuthenticated: false,
-            user: null,
-            token: null
+            user: null
         });
-        this.clearStorage();
-    }
-
-    public getAuthHeaders(): Record<string, string> {
-        if (this.state.token) {
-            return {
-                'Authorization': `Bearer ${this.state.token}`
-            };
-        }
-        return {};
     }
 }
 

@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path, { dirname } from 'path';
 import mime from 'mime';
@@ -40,6 +41,7 @@ app.use(helmet({
 }));
 app.use(cors());
 app.use(morgan('dev'));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -73,7 +75,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Serve index.html for all other routes (SPA support)
-app.get('/', (_req: Request, res: Response) => {
+app.get('/*splat', (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
