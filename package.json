@@ -9,7 +9,9 @@
     "dev:frontend": "node --experimental-strip-types scripts/dev-build.ts",
     "build": "node --experimental-strip-types scripts/build.ts",
     "build:frontend": "node --experimental-strip-types esbuild.config.ts",
-    "build:static": "npm run build:frontend && cp -r public/* dist/",
+    "build:css": "tailwindcss -i frontend/src/styles/input.css -o dist/app.css",
+    "build:css:watch": "tailwindcss -i frontend/src/styles/input.css -o dist/app.css --watch",
+    "build:static": "npm run build:css && npm run build:frontend && cp -r public/* dist/",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.frontend.json --noEmit",
     "start": "node --experimental-strip-types src/server.ts",
     "test": "node --experimental-strip-types --test",
@@ -24,9 +26,11 @@
     "@middy/http-error-handler": "^5.0.0",
     "@middy/http-json-body-parser": "^5.0.0",
     "@middy/input-output-logger": "^5.0.0",
-    "@middy/validator": "^5.0.0"
+    "@middy/validator": "^5.0.0",
+    "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.1.13",
     "@types/aws-lambda": "^8.10.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.0.0",

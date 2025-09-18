@@ -1,10 +1,36 @@
 # Chess Doubles Development Environment with Tilt
 
+# Tailwind CSS Build and Watch
+local_resource(
+    'css-build',
+    cmd='npm run build:css',
+    deps=['frontend/src/styles', 'tailwind.config.js'],
+    labels=['frontend']
+)
+
+local_resource(
+    'css-watch',
+    serve_cmd='npm run build:css:watch',
+    deps=['frontend/src/styles', 'frontend/src', 'public', 'tailwind.config.js'],
+    resource_deps=['css-build'],
+    labels=['frontend'],
+    auto_init=True
+)
+
+local_resource(
+    'copy-public',
+    cmd='cp -r public/* dist/',
+    deps=['public'],
+    labels=['frontend'],
+    auto_init=True,
+)
+
 # Frontend TypeScript Build and Watch
 local_resource(
     'frontend-build',
     cmd='npm run build:frontend',
     deps=['frontend/src', 'shared/types.ts', 'tsconfig.frontend.json', 'esbuild.config.ts'],
+    resource_deps=['css-build'],
     labels=['frontend']
 )
 
@@ -23,7 +49,7 @@ local_resource(
     'static-server',
     serve_cmd='npm run serve',
     deps=['dist'],
-    resource_deps=['frontend-build'],
+    resource_deps=['frontend-build', 'css-build'],
     labels=['frontend'],
     auto_init=True
 )

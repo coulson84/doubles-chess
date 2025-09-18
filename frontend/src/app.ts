@@ -14,12 +14,15 @@ function updateStatus(connected: boolean): void {
     const status = document.getElementById('status');
     if (!status) return;
 
+    const span = status.querySelector('span');
+    if (!span) return;
+
     if (connected) {
-        status.textContent = 'Connected';
-        status.className = 'status connected';
+        span.textContent = 'Connected';
+        status.className = 'p-4 rounded-lg mb-4 transition-colors duration-200 bg-green-100 text-green-800';
     } else {
-        status.textContent = 'Disconnected';
-        status.className = 'status disconnected';
+        span.textContent = 'Disconnected';
+        status.className = 'p-4 rounded-lg mb-4 transition-colors duration-200 bg-red-100 text-red-800';
     }
 }
 
@@ -28,7 +31,7 @@ function addMessage(message: any): void {
     if (!messagesDiv) return;
 
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'message';
+    messageDiv.className = 'p-3 mb-2 border-l-4 border-blue-400 bg-gray-50 rounded-r-lg';
     messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${JSON.stringify(message)}`;
     messagesDiv.appendChild(messageDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;

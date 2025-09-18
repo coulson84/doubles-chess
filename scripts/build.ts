@@ -11,6 +11,17 @@ async function buildAll(): Promise<void> {
   }
 
   try {
+    // Build Tailwind CSS
+    console.log('🎨 Building Tailwind CSS...');
+    const { spawn } = await import('child_process');
+    await new Promise((resolve, reject) => {
+      const cssProcess = spawn('npm', ['run', 'build:css'], { stdio: 'inherit' });
+      cssProcess.on('close', (code) => {
+        if (code === 0) resolve(void 0);
+        else reject(new Error(`CSS build failed with code ${code}`));
+      });
+    });
+
     // Build frontend TypeScript
     console.log('📦 Building frontend...');
     await buildFrontend();
