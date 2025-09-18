@@ -105,7 +105,7 @@ wss.on('connection', (ws, req) => {
       // Echo the message back to the client for now
       const response: WebSocketMessage = {
         type: 'game_update',
-        data: `Server received: ${message.data}`,
+        data: `Server received: ${typeof message.data === 'string' ? message.data : JSON.stringify(message.data)}`,
         timestamp: new Date().toISOString()
       };
       ws.send(JSON.stringify(response));
@@ -115,7 +115,7 @@ wss.on('connection', (ws, req) => {
         if (client !== ws && client.readyState === client.OPEN) {
           client.send(JSON.stringify({
             type: 'game_update',
-            data: `Player action: ${message.data}`,
+            data: `Player action: ${typeof message.data === 'string' ? message.data : JSON.stringify(message.data)}`,
             timestamp: new Date().toISOString()
           }));
         }
