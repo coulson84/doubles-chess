@@ -1,0 +1,40 @@
+{
+  "name": "chess-doubles",
+  "version": "1.0.0",
+  "description": "Chess Doubles web app with AWS Lambda backend",
+  "type": "module",
+  "scripts": {
+    "serve": "serve -p 3001 dist",
+    "dev": "node --experimental-strip-types --watch src/server.ts",
+    "dev:frontend": "node --experimental-strip-types scripts/dev-build.ts",
+    "build": "node --experimental-strip-types scripts/build.ts",
+    "build:frontend": "node --experimental-strip-types esbuild.config.ts",
+    "build:static": "npm run build:frontend && cp -r public/* dist/",
+    "typecheck": "tsc --noEmit && tsc --project tsconfig.frontend.json --noEmit",
+    "start": "node --experimental-strip-types src/server.ts",
+    "test": "node --experimental-strip-types --test",
+    "deploy:lambda": "node --experimental-strip-types scripts/deploy-lambda.ts",
+    "deploy:static": "npm run build:static && aws s3 sync dist/ s3://$S3_BUCKET_NAME --delete"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@middy/core": "^5.0.0",
+    "@middy/http-cors": "^5.0.0",
+    "@middy/http-error-handler": "^5.0.0",
+    "@middy/http-json-body-parser": "^5.0.0",
+    "@middy/input-output-logger": "^5.0.0",
+    "@middy/validator": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.0.0",
+    "esbuild": "^0.20.0",
+    "serve": "^14.2.5",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
