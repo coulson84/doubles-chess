@@ -1,65 +1,54 @@
-import { createServer } from 'http';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import express, { Express, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import path, { dirname } from 'path';
+
+import authRoutes from './routes/auth.js';
+import gameRoutes from './routes/game.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import { fileURLToPath } from 'url';
-import { log } from "./extra.ts";
 
-log();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+dotenv.config();
+
+const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host}`);
+// Middleware
+app.use(helmet());
+app.use(cors());
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-  if (url.pathname === '/') {
-    try {
-      const html = await readFile(join(__dirname, '../public/index.html'), 'utf-8');
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(html);
-    } catch {
-      res.writeHead(404);
-      res.end('Not Found');
-    }
-    return;
-  }
+// Serve static files
+app.use(express.static(path.join(__dirname, '../public')));
+app.use('/dist', express.static(path.join(__dirname, '../dist')));
 
-  if (url.pathname.startsWith('/api/')) {
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    });
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/games', gameRoutes);
 
-    if (req.method === 'OPTIONS') {
-      res.end();
-      return;
-    }
-
-    res.end(JSON.stringify({
-      message: 'API endpoint - proxy to Lambda functions',
-      path: url.pathname
-    }));
-    return;
-  }
-
-  if (url.pathname.endsWith('.js')) {
-    try {
-      const js = await readFile(join(__dirname, '../public', url.pathname), 'utf-8');
-      res.writeHead(200, { 'Content-Type': 'application/javascript' });
-      res.end(js);
-    } catch {
-      res.writeHead(404);
-      res.end('Not Found');
-    }
-    return;
-  }
-
-  res.writeHead(404);
-  res.end('Not Found');
+// Health check
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+// Serve index.html for all other routes (SPA support)
+app.get('/', (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
+// Error handling middleware
+app.use(errorHandler);
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+export default app;

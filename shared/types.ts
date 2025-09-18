@@ -1,12 +1,35 @@
 export interface User {
-    userId: string;
+    id: string;
     username: string;
-    createdAt: string;
-    stats: {
-        gamesPlayed: number;
-        gamesWon: number;
-        rating: number;
-    };
+    email: string;
+    avatar_url?: string;
+    google_id?: string;
+    rating: number;
+    games_played: number;
+    games_won: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AuthToken {
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt: string;
+    tokenType: 'Bearer';
+}
+
+export interface OAuthProvider {
+    name: 'google' | 'facebook' | 'microsoft';
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    scope: string[];
+}
+
+export interface AuthCallbackData {
+    code: string;
+    state: string;
+    provider: 'google' | 'facebook' | 'microsoft';
 }
 
 export interface Game {

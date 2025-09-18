@@ -1,4 +1,38 @@
 # Chess Doubles Development Environment with Tilt
+# Express.js + PostgreSQL + Knex.js Architecture
+
+# PostgreSQL Database via Docker Compose
+docker_compose('docker-compose.yaml')
+dc_resource('postgres', )
+
+# Backend TypeScript compilation
+local_resource(
+    'backend-build',
+    cmd='npm run build:backend',
+    deps=['src', 'knexfile.ts', 'tsconfig.json'],
+    labels=['backend']
+)
+
+# Database setup and migrations
+local_resource(
+    'database-setup',
+    cmd='npm run migrate',
+    deps=['src/db/migrations', 'knexfile.ts'],
+    resource_deps=['backend-build', 'postgres'],
+    labels=['database'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL
+)
+
+local_resource(
+    'database-seed',
+    cmd='npm run seed',
+    deps=['src/db/seeds'],
+    resource_deps=['backend-build', 'database-setup'],
+    labels=['database'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL
+)
 
 # Tailwind CSS Build and Watch
 local_resource(
@@ -19,7 +53,7 @@ local_resource(
 
 local_resource(
     'copy-public',
-    cmd='cp -r public/* dist/',
+    cmd='mkdir -p dist/public && cp -r public/* dist/public',
     deps=['public'],
     labels=['frontend'],
     auto_init=True,
@@ -44,61 +78,85 @@ local_resource(
     trigger_mode=TRIGGER_MODE_MANUAL
 )
 
-# Static File Server for Frontend
+# Express.js Backend Server
 local_resource(
-    'static-server',
-    serve_cmd='npm run serve',
-    deps=['dist'],
-    resource_deps=['frontend-build', 'css-build'],
-    labels=['frontend'],
-    auto_init=True
-)
-
-# Backend Development Server
-local_resource(
-    'backend-server',
+    'express-server',
     serve_cmd='npm run dev',
-    deps=['src', 'shared'],
+    deps=['src', 'shared', 'knexfile.ts'],
+    resource_deps=['backend-build', 'postgres'],
     labels=['backend'],
-    auto_init=True
+    auto_init=True,
 )
 
-# Type Checking (runs on file changes)
+# Type Checking (manual trigger)
 local_resource(
     'typecheck',
     cmd='npm run typecheck',
-    deps=['src', 'frontend/src', 'lambdas', 'shared', 'tsconfig.json', 'tsconfig.frontend.json'],
+    deps=['src', 'frontend/src', 'shared', 'tsconfig.json', 'tsconfig.frontend.json'],
     labels=['dev-tools'],
     auto_init=False,
     trigger_mode=TRIGGER_MODE_MANUAL
 )
 
-# Lambda Functions (for local testing/development)
+# Test Runner (manual trigger)
 local_resource(
-    'lambda-functions',
-    cmd='echo "Lambda functions ready for local testing"',
-    deps=['lambdas', 'shared'],
-    labels=['backend'],
-    auto_init=False
+    'test',
+    cmd='npm test',
+    deps=['src', 'shared'],
+    resource_deps=['backend-build'],
+    labels=['dev-tools'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL
+)
+
+# Database migration tools
+local_resource(
+    'migrate-rollback',
+    cmd='npm run migrate:rollback',
+    deps=['src/db/migrations'],
+    resource_deps=['backend-build'],
+    labels=['database'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL
 )
 
 print("""
 🎯 Chess Doubles Development Environment
+Express.js + PostgreSQL + Knex.js
 
 Services:
-  🎮 Frontend (Static): http://localhost:3001
-  🚀 Backend (Dev):     http://localhost:3000
+  🚀 Express API Server:  http://localhost:3000
+  🗄️  PostgreSQL Database: localhost:5435 (auto-started via Docker)
 
-Commands:
-  - Press 'space' to open Tilt UI in browser
-  - Use Tilt UI to trigger manual resources
-  - All file changes are watched automatically
+Quick Start:
+  1. Run 'tilt up' - PostgreSQL starts automatically
+  2. Copy .env.example to .env (already configured for Docker)
+  3. Click 'database-setup' resource to create tables
+  4. Backend server auto-starts and serves both API and static files
 
-Frontend: TypeScript → JavaScript compilation with esbuild
-Backend:  Node.js with --experimental-strip-types hot reload
+Manual Resources (click to trigger):
+  📊 typecheck         - Run TypeScript checks
+  🧪 test             - Run test suite
+  📋 database-setup    - Run migrations (after postgres is ready)
+  🌱 database-seed     - Populate test data
+  ⏪ migrate-rollback  - Rollback last migration
+
+Development:
+  - PostgreSQL runs in Docker container (persistent data)
+  - Express server serves frontend at /
+  - API endpoints at /api/*
+  - Auto-restart on backend changes
+  - Frontend rebuild on changes
+
+Database Info:
+  - Host: localhost:5435
+  - Database: chess_doubles_dev
+  - User/Pass: postgres/postgres
 """)
 
-# Resource grouping for better organization
-def set_resource_labels():
-    """Organize resources by labels for better UX"""
-    pass
+# Resource grouping configuration
+config.define_string("database_url")
+cfg = config.parse()
+
+if cfg.get("database_url"):
+    print("📌 Using custom database URL: " + cfg.get("database_url"))

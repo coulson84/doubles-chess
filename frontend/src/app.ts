@@ -1,9 +1,17 @@
 import type { WebSocketMessage } from '../../shared/types.ts';
+import { authManager } from './auth.ts';
+import { apiService } from './api.ts';
 
 interface WindowExtended extends Window {
     connectWebSocket: () => void;
     sendMessage: () => void;
     testAPI: () => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
+    loginForm: () => Promise<void>;
+    registerForm: () => Promise<void>;
+    logout: () => Promise<void>;
+    createGame: () => Promise<void>;
+    joinGame: () => Promise<void>;
 }
 
 declare const window: WindowExtended;
@@ -172,7 +180,7 @@ function sendMessage(): void {
 
 async function testAPI(): Promise<void> {
     try {
-        const response = await fetch('/api/test');
+        const response = await fetch('/health');
         const data = await response.json();
         addMessage({ api_response: data });
     } catch (error) {
@@ -180,15 +188,139 @@ async function testAPI(): Promise<void> {
     }
 }
 
+// Authentication functions
+async function loginWithGoogle(): Promise<void> {
+    try {
+        await authManager.loginWithProvider('google');
+    } catch (error) {
+        console.error('Google login failed:', error);
+        addMessage({ error: 'Google login failed' });
+    }
+}
+
+async function loginForm(): Promise<void> {
+    const email = prompt('Email or Username:');
+    const password = prompt('Password:');
+
+    if (email && password) {
+        try {
+            await authManager.login(email, password);
+            addMessage({ success: 'Logged in successfully' });
+        } catch (error) {
+            console.error('Login failed:', error);
+            addMessage({ error: 'Login failed: ' + (error as Error).message });
+        }
+    }
+}
+
+async function registerForm(): Promise<void> {
+    const email = prompt('Email:');
+    const username = prompt('Username:');
+    const password = prompt('Password:');
+
+    if (email && username && password) {
+        try {
+            await authManager.register(email, username, password);
+            addMessage({ success: 'Registered successfully' });
+        } catch (error) {
+            console.error('Registration failed:', error);
+            addMessage({ error: 'Registration failed: ' + (error as Error).message });
+        }
+    }
+}
+
+async function logout(): Promise<void> {
+    await authManager.logout();
+    addMessage({ info: 'Logged out successfully' });
+}
+
+async function createGame(): Promise<void> {
+    try {
+        const result = await apiService.createGame();
+        addMessage({ success: `Game created with code: ${result.game.code}` });
+    } catch (error) {
+        addMessage({ error: 'Failed to create game: ' + (error as Error).message });
+    }
+}
+
+async function joinGame(): Promise<void> {
+    const code = prompt('Enter game code:');
+    if (code) {
+        try {
+            const result = await apiService.joinGame(code.toUpperCase());
+            addMessage({ success: `Joined game: ${result.game.code}` });
+        } catch (error) {
+            addMessage({ error: 'Failed to join game: ' + (error as Error).message });
+        }
+    }
+}
+
+function updateAuthUI(): void {
+    const authState = authManager.getState();
+    const loginSection = document.getElementById('login-section');
+    const userSection = document.getElementById('user-section');
+
+    if (authState.isAuthenticated && authState.user) {
+        // Show user section, hide login section
+        loginSection?.classList.add('hidden');
+        userSection?.classList.remove('hidden');
+
+        // Update user profile info
+        const userAvatar = document.getElementById('user-avatar') as HTMLImageElement;
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
+        const userGames = document.getElementById('user-games');
+        const userWins = document.getElementById('user-wins');
+        const userRating = document.getElementById('user-rating');
+
+        if (userAvatar) userAvatar.src = authState.user.avatar_url || '/default-avatar.png';
+        if (userName) userName.textContent = authState.user.username;
+        if (userEmail) userEmail.textContent = authState.user.email;
+        if (userGames) userGames.textContent = authState.user.games_played?.toString() || '0';
+        if (userWins) userWins.textContent = authState.user.games_won?.toString() || '0';
+        if (userRating) userRating.textContent = authState.user.rating?.toString() || '1200';
+
+        addMessage({
+            type: 'auth',
+            message: `Welcome back, ${authState.user.username}!`
+        });
+    } else {
+        // Show login section, hide user section
+        loginSection?.classList.remove('hidden');
+        userSection?.classList.add('hidden');
+    }
+}
+
+function handleAuthCallback(): void {
+    // Check authentication status on page load
+    authManager.checkAuthStatus();
+}
+
 // Expose functions to global scope
 window.connectWebSocket = connectWebSocket;
 window.sendMessage = sendMessage;
 window.testAPI = testAPI;
+window.loginWithGoogle = loginWithGoogle;
+window.loginForm = loginForm;
+window.registerForm = registerForm;
+window.logout = logout;
+window.createGame = createGame;
+window.joinGame = joinGame;
 
 // Initialize chess boards and auto-connect on load
 function initializeApp(): void {
     createChessBoard('board1');
     createChessBoard('board2');
+
+    // Set up auth state listener
+    authManager.subscribe(updateAuthUI);
+
+    // Handle OAuth callback if present
+    handleAuthCallback();
+
+    // Update initial auth UI
+    updateAuthUI();
+
     connectWebSocket();
 }
 

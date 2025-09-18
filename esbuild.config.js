@@ -1,11 +1,15 @@
 import { build } from 'esbuild';
-import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-export const buildFrontend = async (): Promise<void> => {
+const buildFrontend = async () => {
   try {
-    await build({
+     await build({
       entryPoints: ['frontend/src/app.ts'],
       bundle: true,
       outfile: 'dist/app.js',
@@ -28,6 +32,7 @@ export const buildFrontend = async (): Promise<void> => {
   }
 };
 
-if (import.meta.url === `file://${resolve(process.argv[1])}`) {
+// Run if this file is executed directly
+if (import.meta.url === `file://${__filename}`) {
   buildFrontend();
 }

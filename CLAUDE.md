@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chess Doubles is a web application with a TypeScript-based architecture using AWS Lambda for backend services and DynamoDB for data storage. The frontend communicates via HTTP APIs and WebSockets.
+Chess Doubles is a web application with a classic Express.js architecture using PostgreSQL database with Knex.js ORM. The application features real-time multiplayer chess with support for team-based gameplay.
 
 ## Commands
 
@@ -14,162 +14,222 @@ Chess Doubles is a web application with a TypeScript-based architecture using AW
 # Install dependencies
 npm install
 
-# Start full development environment with Tilt (recommended)
-tilt up
-
-# Manual development commands (without Tilt):
 # Start development server with hot reload
 npm run dev
 
 # Build frontend with watch mode
 npm run dev:frontend
 
-# Serve static files from dist/
-npm run serve
-
-# Build entire project
+# Build entire project for production
 npm run build
 
 # Build only frontend TypeScript to JavaScript
 npm run build:frontend
 
-# Build static files for S3 deployment
-npm run build:static
+# Build CSS with Tailwind
+npm run build:css
 
 # Type checking for all TypeScript
 npm run typecheck
 
-# Start production server
+# Start production server (requires build first)
 npm start
+
+# Start development server without compilation
+npm run start:dev
 
 # Run tests
 npm test
 
-# Deploy Lambda functions
-npm run deploy:lambda
-
-# Deploy static files to S3 (requires S3_BUCKET_NAME env var)
-npm run deploy:static
+# Database commands
+npm run migrate          # Run latest migrations
+npm run migrate:make     # Create new migration
+npm run migrate:rollback # Rollback last migration
+npm run seed            # Run seeds
+npm run seed:make       # Create new seed
 ```
 
 ## Architecture
 
 ### Technology Stack
 
-- **Runtime**: Node.js 22+ with native TypeScript support (--experimental-strip-types)
+- **Backend**: Express.js with TypeScript (Node.js 22+)
+- **Database**: PostgreSQL with Knex.js ORM
 - **Frontend**: TypeScript compiled to vanilla JavaScript via esbuild
-- **Backend**: AWS Lambda functions with Middy middleware
-- **Database**: DynamoDB
+- **Authentication**: JWT with bcrypt password hashing
 - **WebSocket**: Native ws library for real-time communication
 - **Build Tool**: esbuild for fast TypeScript compilation
-- **Development**: Tilt for orchestrating multiple services
-- **Deployment**: Static files to S3, Lambda functions separately
+- **Development**: Nodemon for auto-restart
 
 ### Project Structure
 
 ```
 /
-├── src/              # Development server code
-│   └── server.ts     # Main HTTP/WebSocket server (development only)
-├── frontend/         # Frontend TypeScript source
+├── src/                    # Express backend source
+│   ├── server.ts           # Main Express server
+│   ├── routes/             # API route handlers
+│   │   ├── auth.ts         # Authentication routes
+│   │   └── game.ts         # Game-related routes
+│   ├── controllers/        # Business logic controllers
+│   │   ├── authController.ts    # Auth logic
+│   │   └── gameController.ts    # Game logic
+│   ├── middleware/         # Express middleware
+│   │   ├── auth.ts         # Authentication middleware
+│   │   └── errorHandler.ts # Error handling
+│   ├── models/             # Database models (if needed)
+│   └── db/                 # Database configuration
+│       ├── knex.ts         # Knex instance
+│       ├── migrations/     # Database migrations
+│       └── seeds/          # Database seeds
+├── frontend/               # Frontend TypeScript source
 │   └── src/
-│       └── app.ts    # Main frontend application
-├── public/           # Static HTML/CSS files
-│   └── index.html    # Main HTML page
-├── dist/             # Built frontend files (S3 deployment)
-│   ├── index.html    # Copied from public/
-│   └── app.js        # Compiled from frontend/src/
-├── lambdas/          # AWS Lambda functions
-│   ├── game-handler.ts   # Game logic handler
-│   └── auth-handler.ts   # Authentication handler
-├── shared/           # Shared types and utilities
-│   ├── types.ts          # TypeScript interfaces
-│   └── auth-middleware.ts # Middy auth middleware
-├── scripts/          # Build and deployment scripts
-│   ├── build.ts      # Full project build
-│   └── dev-build.ts  # Development build with watch
-├── esbuild.config.ts # Frontend build configuration
-├── tsconfig.json     # Main TypeScript config
-├── tsconfig.frontend.json # Frontend-specific TypeScript config
-└── Tiltfile          # Development environment orchestration
+│       ├── app.ts          # Main frontend application
+│       ├── auth.ts         # Authentication manager
+│       └── api.ts          # API service layer
+├── public/                 # Static HTML/CSS files
+│   └── index.html          # Main HTML page
+├── dist/                   # Built frontend files
+│   ├── index.html          # Copied from public/
+│   └── app.js              # Compiled from frontend/src/
+├── shared/                 # Shared types and utilities
+│   └── types.ts            # TypeScript interfaces
+├── knexfile.ts             # Knex configuration
+├── tsconfig.json           # Backend TypeScript config
+└── tsconfig.frontend.json  # Frontend TypeScript config
 ```
 
-### TypeScript Configuration
+### Database Schema
 
-- **Backend**: Node.js 22+ with `--experimental-strip-types` flag (no compilation needed)
-- **Frontend**: TypeScript compiled to JavaScript via esbuild
-- **Type Checking**: Separate configs for backend (`tsconfig.json`) and frontend (`tsconfig.frontend.json`)
-- **Build Process**: esbuild bundles frontend TypeScript into single `app.js` file
-- **Development**: Watch mode available for both backend and frontend
+#### Users Table
+- `id` (UUID, primary key)
+- `email` (string, unique)
+- `username` (string, unique)
+- `password_hash` (string, nullable for OAuth users)
+- `google_id` (string, unique, nullable)
+- `avatar_url` (string, nullable)
+- `rating` (integer, default 1200)
+- `games_played` (integer, default 0)
+- `games_won` (integer, default 0)
+- `created_at`, `updated_at` (timestamps)
 
-### Lambda Functions Architecture
+#### Games Table
+- `id` (UUID, primary key)
+- `code` (6-character string, unique)
+- `white_player_id`, `black_player_id` (user references)
+- `white_partner_id`, `black_partner_id` (user references)
+- `pgn` (text, nullable)
+- `current_position` (JSONB)
+- `status` (enum: waiting, active, completed, abandoned)
+- `result` (enum: white, black, draw, null)
+- `turn` (enum: white, black)
+- `move_number` (integer)
+- `last_move_at` (timestamp)
+- `created_at`, `updated_at` (timestamps)
 
-Each Lambda function uses Middy middleware for:
-
-- **@middy/http-json-body-parser**: Parse JSON request bodies
-- **@middy/http-error-handler**: Handle errors gracefully
-- **@middy/http-cors**: CORS headers management
-- **@middy/validator**: Input validation with JSON schemas
-- **@middy/input-output-logger**: Request/response logging
-- Custom auth middleware in `shared/auth-middleware.ts`
-
-### DynamoDB Tables
-
-- **chess-doubles-users**: User accounts and statistics
-- **chess-doubles-games**: Game state and history
+#### Moves Table
+- `id` (UUID, primary key)
+- `game_id` (game reference, cascade delete)
+- `player_id` (user reference)
+- `move_number` (integer)
+- `from`, `to` (chess notation)
+- `piece` (piece type)
+- `captured`, `promotion` (nullable)
+- `san` (standard algebraic notation)
+- `position_after` (JSONB)
+- `created_at`, `updated_at` (timestamps)
 
 ### API Endpoints
 
-- `/api/*` - Proxies to Lambda functions
-- WebSocket connections for real-time game updates
+#### Authentication (`/api/auth`)
+- `POST /register` - User registration
+- `POST /login` - User login
+- `POST /logout` - User logout
+- `GET /me` - Get current user
+- `POST /refresh` - Refresh JWT token
+- `GET /google` - Google OAuth (if implemented)
+
+#### Games (`/api/games`)
+- `POST /create` - Create new game (auth required)
+- `POST /join/:code` - Join game by code (auth required)
+- `GET /game/:id` - Get game details
+- `POST /game/:id/move` - Make a move (auth required)
+- `POST /game/:id/resign` - Resign from game (auth required)
+- `GET /my-games` - Get user's games (auth required)
+- `GET /active` - Get active games list
+
+### Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+```bash
+# Server
+PORT=3000
+NODE_ENV=development
+
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=chess_doubles_dev
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_SSL=false
+
+# JWT
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRES_IN=7d
+
+# OAuth (optional)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+```
 
 ## Development Workflow
 
-### Running Locally with Tilt (Recommended)
+### Local Development Setup
 
-1. Start the development environment: `tilt up`
-2. Open Tilt UI in browser (usually opens automatically)
-3. Access services:
-   - **Frontend (Static)**: http://localhost:3001
-   - **Backend (Dev)**: http://localhost:3000
-4. All file changes are watched automatically
-5. Use Tilt UI to trigger manual resources like type checking
+1. Install PostgreSQL and create database
+2. Copy `.env.example` to `.env` and configure
+3. Install dependencies: `npm install`
+4. Run migrations: `npm run migrate`
+5. Start development server: `npm run dev`
+6. Access application at `http://localhost:3000`
 
-### Manual Development (Alternative)
+### Database Management
 
-1. Start the development server: `npm run dev`
-2. In a separate terminal, build frontend with watch: `npm run dev:frontend`
-3. In a third terminal, serve static files: `npm run serve`
-4. Access the application at `http://localhost:3000` (backend) or `http://localhost:3001` (static)
+- Create migrations: `npm run migrate:make migration_name`
+- Run migrations: `npm run migrate`
+- Rollback migrations: `npm run migrate:rollback`
+- Create seeds: `npm run seed:make seed_name`
+- Run seeds: `npm run seed`
 
-### Static Deployment (S3)
+### Authentication Flow
 
-1. Build static files: `npm run build:static`
-2. Deploy to S3: `npm run deploy:static` (requires `S3_BUCKET_NAME` environment variable)
-3. The `dist/` directory contains all files needed for static hosting
+1. Users can register with email/username/password
+2. JWT tokens are stored in HTTP-only cookies
+3. Tokens include user ID, email, and username
+4. Authentication middleware validates tokens on protected routes
+5. Google OAuth integration available (requires configuration)
 
-### Adding New Lambda Functions
+### Game Flow
 
-1. Create new handler in `lambdas/` directory
-2. Use Middy middleware stack for consistency
-3. Add appropriate input validation schemas
-4. Include auth middleware where needed
+1. User creates game (receives 6-character code)
+2. Other users join using game code
+3. Game starts when all 4 positions filled
+4. Real-time moves via WebSocket or polling
+5. Game state stored in PostgreSQL with move history
 
-### Tilt Development Environment
+### Frontend Architecture
 
-The Tiltfile orchestrates the following services:
-
-- **Frontend Build**: Initial TypeScript compilation
-- **Frontend Watch**: Continuous rebuild on file changes
-- **Static Server**: Serves built files on port 3001
-- **Backend Server**: Development server with hot reload on port 3000
-- **Type Checking**: Manual trigger for full type validation
-- **Lambda Functions**: Ready for local testing
-
-Use `tilt up` to start all services simultaneously with automatic file watching.
+- Vanilla TypeScript compiled via esbuild
+- Authentication manager handles login state
+- API service layer for backend communication
+- Real-time updates via WebSocket connection
+- Chess board rendered with CSS Grid and Unicode pieces
 
 ### Type Safety
 
-- All Lambda handlers use AWS Lambda types
-- Shared types in `shared/types.ts`
-- Strict TypeScript configuration enabled
+- Shared TypeScript interfaces in `shared/types.ts`
+- Strict TypeScript configuration
+- Database queries use Knex.js query builder
+- Express routes with typed request/response objects

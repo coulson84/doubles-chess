@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Pieces Grid</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <style>
+    .chess-piece {
+      width: 64px;
+      height: 64px;
+      display: block;
+      margin: auto;
+    }
+    .piece-label {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="container mx-auto p-8">
+    <h1 class="text-2xl font-bold mb-8 text-center">Chess Pieces Grid</h1>
+    <div class="grid grid-cols-6 gap-8">
+      <div>
+        <svg class="chess-piece" style="color: black"><use href="chess-pieces.svg#chess-king"/></svg>
+        <div class="piece-label">King (Black)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: white"><use href="chess-pieces.svg#chess-king"/></svg>
+        <div class="piece-label">King (White)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: black"><use href="chess-pieces.svg#chess-queen"/></svg>
+        <div class="piece-label">Queen (Black)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: white"><use href="chess-pieces.svg#chess-queen"/></svg>
+        <div class="piece-label">Queen (White)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: black"><use href="chess-pieces.svg#chess-rook"/></svg>
+        <div class="piece-label">Rook (Black)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: white"><use href="chess-pieces.svg#chess-rook"/></svg>
+        <div class="piece-label">Rook (White)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: black"><use href="chess-pieces.svg#chess-bishop"/></svg>
+        <div class="piece-label">Bishop (Black)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: white"><use href="chess-pieces.svg#chess-bishop"/></svg>
+        <div class="piece-label">Bishop (White)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: black"><use href="chess-pieces.svg#chess-knight"/></svg>
+        <div class="piece-label">Knight (Black)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: white"><use href="chess-pieces.svg#chess-knight"/></svg>
+        <div class="piece-label">Knight (White)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: black"><use href="chess-pieces.svg#chess-pawn"/></svg>
+        <div class="piece-label">Pawn (Black)</div>
+      </div>
+      <div>
+        <svg class="chess-piece" style="color: white"><use href="chess-pieces.svg#chess-pawn"/></svg>
+        <div class="piece-label">Pawn (White)</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
