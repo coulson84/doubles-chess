@@ -2,19 +2,7 @@ import type { WebSocketMessage } from '../../shared/types.ts';
 import { authManager } from './auth.ts';
 import { apiService } from './api.ts';
 
-interface WindowExtended extends Window {
-    connectWebSocket: () => void;
-    sendMessage: () => void;
-    testAPI: () => Promise<void>;
-    loginWithGoogle: () => Promise<void>;
-    loginForm: () => Promise<void>;
-    registerForm: () => Promise<void>;
-    logout: () => Promise<void>;
-    createGame: () => Promise<void>;
-    joinGame: () => Promise<void>;
-}
-
-declare const window: WindowExtended;
+// Remove global window extensions - using event listeners instead
 
 // Chess piece symbols (Unicode)
 const CHESS_PIECES = {
@@ -296,21 +284,128 @@ function handleAuthCallback(): void {
     authManager.checkAuthStatus();
 }
 
-// Expose functions to global scope
-window.connectWebSocket = connectWebSocket;
-window.sendMessage = sendMessage;
-window.testAPI = testAPI;
-window.loginWithGoogle = loginWithGoogle;
-window.loginForm = loginForm;
-window.registerForm = registerForm;
-window.logout = logout;
-window.createGame = createGame;
-window.joinGame = joinGame;
+// Custom event types
+const AppEvents = {
+    WEBSOCKET_CONNECT: 'app:websocket:connect',
+    WEBSOCKET_SEND_MESSAGE: 'app:websocket:send-message',
+    API_TEST: 'app:api:test',
+    AUTH_LOGIN_GOOGLE: 'app:auth:login-google',
+    AUTH_LOGIN_FORM: 'app:auth:login-form',
+    AUTH_REGISTER_FORM: 'app:auth:register-form',
+    AUTH_LOGOUT: 'app:auth:logout',
+    GAME_CREATE: 'app:game:create',
+    GAME_JOIN: 'app:game:join',
+    CHESS_SQUARE_CLICK: 'app:chess:square-click'
+} as const;
+
+// Event delegation dispatcher
+function setupEventListeners(): void {
+    document.addEventListener('click', (event: Event) => {
+        const target = event.target as HTMLElement;
+        if (!target) return;
+
+        // Handle button clicks
+        if (target.tagName === 'BUTTON') {
+            const customEventType = getCustomEventType(target.id);
+            if (customEventType) {
+                document.dispatchEvent(new CustomEvent(customEventType, {
+                    detail: { originalEvent: event, target }
+                }));
+            }
+        }
+
+        // Handle chess square clicks
+        else if (target.dataset.row !== undefined && target.dataset.col !== undefined) {
+            const boardId = target.closest('[id^="board"]')?.id;
+            if (boardId) {
+                document.dispatchEvent(new CustomEvent(AppEvents.CHESS_SQUARE_CLICK, {
+                    detail: {
+                        boardId,
+                        row: parseInt(target.dataset.row),
+                        col: parseInt(target.dataset.col),
+                        target
+                    }
+                }));
+            }
+        }
+    });
+}
+
+// Map button IDs to custom event types
+function getCustomEventType(buttonId: string): string | null {
+    const eventMap: Record<string, string> = {
+        'connect-ws-btn': AppEvents.WEBSOCKET_CONNECT,
+        'send-message-btn': AppEvents.WEBSOCKET_SEND_MESSAGE,
+        'test-api-btn': AppEvents.API_TEST,
+        'google-login-btn': AppEvents.AUTH_LOGIN_GOOGLE,
+        'login-form-btn': AppEvents.AUTH_LOGIN_FORM,
+        'register-form-btn': AppEvents.AUTH_REGISTER_FORM,
+        'logout-btn': AppEvents.AUTH_LOGOUT,
+        'create-game-btn': AppEvents.GAME_CREATE,
+        'join-game-btn': AppEvents.GAME_JOIN,
+    };
+
+    return eventMap[buttonId] || null;
+}
+
+// Register event handlers for different modules
+function registerEventHandlers(): void {
+    // WebSocket module handlers
+    document.addEventListener(AppEvents.WEBSOCKET_CONNECT, () => {
+        connectWebSocket();
+    });
+
+    document.addEventListener(AppEvents.WEBSOCKET_SEND_MESSAGE, () => {
+        sendMessage();
+    });
+
+    // API module handlers
+    document.addEventListener(AppEvents.API_TEST, () => {
+        testAPI();
+    });
+
+    // Authentication module handlers
+    document.addEventListener(AppEvents.AUTH_LOGIN_GOOGLE, () => {
+        loginWithGoogle();
+    });
+
+    document.addEventListener(AppEvents.AUTH_LOGIN_FORM, () => {
+        loginForm();
+    });
+
+    document.addEventListener(AppEvents.AUTH_REGISTER_FORM, () => {
+        registerForm();
+    });
+
+    document.addEventListener(AppEvents.AUTH_LOGOUT, () => {
+        logout();
+    });
+
+    // Game module handlers
+    document.addEventListener(AppEvents.GAME_CREATE, () => {
+        createGame();
+    });
+
+    document.addEventListener(AppEvents.GAME_JOIN, () => {
+        joinGame();
+    });
+
+    // Chess module handlers
+    document.addEventListener(AppEvents.CHESS_SQUARE_CLICK, (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { boardId, row, col } = customEvent.detail;
+        handleSquareClick(boardId, row, col);
+    });
+}
 
 // Initialize chess boards and auto-connect on load
 function initializeApp(): void {
     createChessBoard('board1');
     createChessBoard('board2');
+
+    // Set up event system
+    setupEventListeners();    // Event delegation dispatcher
+    registerEventHandlers();  // Module-specific event handlers
 
     // Set up auth state listener
     authManager.subscribe(updateAuthUI);

@@ -9,8 +9,8 @@
     "build": "npm run build:backend && npm run build:frontend && npm run build:css",
     "build:backend": "tsc",
     "build:frontend": "node esbuild.config.js",
-    "build:css": "tailwindcss -i frontend/src/styles/input.css -o dist/app.css",
-    "build:css:watch": "tailwindcss -i frontend/src/styles/input.css -o dist/app.css --watch",
+    "build:css": "tailwindcss -i frontend/src/styles/input.css -o dist/public/app.css",
+    "build:css:watch": "tailwindcss -i frontend/src/styles/input.css -o dist/public/app.css --watch",
     "start": "node dist/src/server.js",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.frontend.json --noEmit",
     "migrate": "npm run build:backend && knex --knexfile dist/knexfile.js migrate:latest",
@@ -38,6 +38,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
+    "mime": "^4.1.0",
     "morgan": "^1.10.1",
     "pg": "^8.16.3",
     "tailwindcss": "^4.1.13"

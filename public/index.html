@@ -25,7 +25,7 @@
 
                 <div class="space-y-3">
                     <!-- Google Login -->
-                    <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center px-6 py-3 bg-white text-gray-800 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium">
+                    <button id="google-login-btn" class="w-full flex items-center justify-center px-6 py-3 bg-white text-gray-800 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium">
                         <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -35,20 +35,20 @@
                         Continue with Google
                     </button>
 
-                    <!-- Facebook Login -->
-                    <button onclick="loginWithFacebook()" class="w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
+                    <!-- Email/Username Login -->
+                    <button id="login-form-btn" class="w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
                         <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            <path d="M12 12.017c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         </svg>
-                        Continue with Facebook
+                        Login with Email
                     </button>
 
-                    <!-- Microsoft Login -->
-                    <button onclick="loginWithMicrosoft()" class="w-full flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-200 font-medium">
+                    <!-- Register -->
+                    <button id="register-form-btn" class="w-full flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors duration-200 font-medium">
                         <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
-                        Continue with Microsoft
+                        Register Account
                     </button>
                 </div>
             </div>
@@ -76,7 +76,7 @@
                         <div class="text-xs text-gray-400">Rating</div>
                     </div>
                 </div>
-                <button onclick="logout()" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+                <button id="logout-btn" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
                     Sign Out
                 </button>
             </div>
@@ -84,14 +84,20 @@
 
         <!-- Game Controls -->
         <div class="flex justify-center space-x-4 mb-8">
-            <button onclick="connectWebSocket()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
+            <button id="connect-ws-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
                 Connect
             </button>
-            <button onclick="testAPI()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
+            <button id="test-api-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
                 Test API
             </button>
-            <button onclick="sendMessage()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
+            <button id="send-message-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
                 Send Message
+            </button>
+            <button id="create-game-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
+                Create Game
+            </button>
+            <button id="join-game-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
+                Join Game
             </button>
         </div>
 
