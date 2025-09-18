@@ -5,11 +5,14 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path, { dirname } from 'path';
 import mime from 'mime';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { fileURLToPath } from 'url';
+import type { WebSocketMessage } from '../shared/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -77,9 +80,66 @@ app.get('/', (_req: Request, res: Response) => {
 // Error handling middleware
 app.use(errorHandler);
 
+// Create HTTP server and WebSocket server
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
+
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+  console.log('New WebSocket connection from', req.socket.remoteAddress);
+
+  // Send welcome message
+  const welcomeMessage: WebSocketMessage = {
+    type: 'connect',
+    data: 'Connected to Chess Doubles server',
+    timestamp: new Date().toISOString()
+  };
+  ws.send(JSON.stringify(welcomeMessage));
+
+  // Handle incoming messages
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data.toString()) as WebSocketMessage;
+      console.log('Received WebSocket message:', message);
+
+      // Echo the message back to the client for now
+      const response: WebSocketMessage = {
+        type: 'game_update',
+        data: `Server received: ${message.data}`,
+        timestamp: new Date().toISOString()
+      };
+      ws.send(JSON.stringify(response));
+
+      // Broadcast to all other connected clients (excluding sender)
+      wss.clients.forEach((client) => {
+        if (client !== ws && client.readyState === client.OPEN) {
+          client.send(JSON.stringify({
+            type: 'game_update',
+            data: `Player action: ${message.data}`,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      });
+    } catch (error) {
+      console.error('Error parsing WebSocket message:', error);
+    }
+  });
+
+  // Handle connection close
+  ws.on('close', (code, reason) => {
+    console.log(`WebSocket connection closed: ${code} ${reason}`);
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+});
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Express server running on port ${PORT}`);
+  console.log(`🔌 WebSocket server ready for connections`);
 });
 
 export default app;
