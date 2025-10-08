@@ -126,6 +126,28 @@ export class GameController {
     }
   }
 
+  async listMyGames(req: AuthRequest, res: Response) {
+    const games = await db('games')
+      .where('white_player_id', req.user?.id)
+      .orWhere('black_player_id', req.user?.id)
+      .orWhere('white_partner_id', req.user?.id)
+      .orWhere('black_partner_id', req.user?.id)
+      .orderBy('created_at', 'desc')
+      .limit(20);
+
+    res.json({ games });
+  }
+
+  async listUnstartedGames(req: AuthRequest, res: Response) {
+    const games = await db('games')
+      .where('status', 'waiting')
+      .orderBy('created_at', 'desc')
+      .limit(20);
+
+    res.json({ games });
+  }
+
+
   async getGame(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;

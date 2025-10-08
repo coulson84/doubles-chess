@@ -29,7 +29,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for Tailwind
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "data:"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "ws:", "wss:"],
       fontSrc: ["'self'"],

@@ -50,6 +50,26 @@ class ApiService {
         return response.json();
     }
 
+    async listMyGames() {
+        const response = await this.fetch('/games/my-games');
+
+        if (!response.ok) {
+            throw new Error('Failed to list games');
+        }
+
+        return response.json();
+    }
+
+    async listUnstartedGames() {
+        const response = await this.fetch('/games/unstarted');
+
+        if (!response.ok) {
+            throw new Error('Failed to list unstarted games');
+        }
+
+        return response.json();
+    }
+
     async makeMove(gameId: string, from: string, to: string, promotion?: string) {
         const response = await this.fetch(`/games/game/${gameId}/move`, {
             method: 'POST',
