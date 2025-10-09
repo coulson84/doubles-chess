@@ -119,12 +119,27 @@
               <div class="game-card">
                 <div class="game-header">
                   <h3>Game {game.id.slice(0, 8)}</h3>
-                  <span
-                    class="status-badge"
-                    style="background-color: {getStatusColor(game.status)}"
-                  >
-                    {getStatusDisplay(game.status)}
-                  </span>
+                  <div class="badges">
+                    <span
+                      class="status-badge"
+                      style="background-color: {getStatusColor(game.status)}"
+                    >
+                      {getStatusDisplay(game.status)}
+                    </span>
+                    {#if game.role === 'invited'}
+                      <span class="role-badge invitation">
+                        {#if game.invitationStatus === 'pending'}
+                          Invited
+                        {:else if game.invitationStatus === 'accepted'}
+                          Accepted
+                        {:else}
+                          Declined
+                        {/if}
+                      </span>
+                    {:else}
+                      <span class="role-badge creator">Your Game</span>
+                    {/if}
+                  </div>
                 </div>
                 <div class="game-details">
                   <p><strong>Created:</strong> {formatDate(game.createdAt)}</p>
@@ -332,6 +347,12 @@
     font-family: monospace;
   }
 
+  .badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
   .status-badge {
     padding: 0.4rem 0.8rem;
     border-radius: 20px;
@@ -340,6 +361,25 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+
+  .role-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .role-badge.creator {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+
+  .role-badge.invitation {
+    background: #fff3cd;
+    color: #856404;
   }
 
   .game-details {
