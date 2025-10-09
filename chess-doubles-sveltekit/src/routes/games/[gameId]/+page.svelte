@@ -7,6 +7,9 @@
   $: session = data.session;
   $: user = session?.user;
   $: game = data.game;
+  $: invitations = data.invitations || [];
+  $: totalPlayers = 1 + invitations.length; // Creator + invited players
+  $: canInviteMore = totalPlayers < 4;
 
   function getStatusDisplay(status: string): string {
     switch (status) {
@@ -110,11 +113,47 @@
     }, 200);
   }
 
+  let inviteError = '';
+  let inviteSuccess = '';
+
   async function inviteUser(userId: string) {
-    // TODO: Implement invite API call
-    alert(`Inviting user ${userId} - Coming soon!`);
-    searchQuery = '';
-    showDropdown = false;
+    inviteError = '';
+    inviteSuccess = '';
+
+    // Check if we can invite more players
+    if (!canInviteMore) {
+      inviteError = 'Maximum 4 players (1 creator + 3 invited)';
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/games/${game.id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      if (response.ok) {
+        const userName = searchResults.find(u => u.id === userId)?.name || 'User';
+        inviteSuccess = `Invited ${userName} to the game!`;
+        searchQuery = '';
+        showDropdown = false;
+
+        // Reload the page to show the new invitation
+        goto(window.location.pathname, { invalidateAll: true });
+
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          inviteSuccess = '';
+        }, 3000);
+      } else {
+        const error = await response.json();
+        inviteError = error.error || 'Failed to send invitation';
+      }
+    } catch (error) {
+      console.error('Error inviting user:', error);
+      inviteError = 'An error occurred while sending the invitation';
+    }
   }
 </script>
 
@@ -172,14 +211,21 @@
           <div class="players-header">
             <h2>Players</h2>
             <div class="invite-container">
+              {#if inviteSuccess}
+                <div class="invite-message success">{inviteSuccess}</div>
+              {/if}
+              {#if inviteError}
+                <div class="invite-message error">{inviteError}</div>
+              {/if}
               <input
                 type="text"
-                placeholder="Invite players"
+                placeholder={canInviteMore ? "Invite players" : "Maximum players reached (4/4)"}
                 class="invite-input"
                 bind:value={searchQuery}
                 on:input={handleSearchInput}
                 on:focus={handleSearchFocus}
                 on:blur={handleSearchBlur}
+                disabled={!canInviteMore}
               />
               {#if showDropdown}
                 <div class="search-dropdown">
@@ -225,6 +271,7 @@
             </div>
           </div>
           <div class="players-grid">
+            <!-- Creator slot -->
             <div class="player-slot filled">
               <div class="player-icon">👤</div>
               <div class="player-info">
@@ -232,31 +279,38 @@
                 <div class="player-status">Creator</div>
               </div>
             </div>
-            <div class="player-slot empty">
-              <div class="player-icon">⭕</div>
-              <div class="player-info">
-                <div class="player-name">Waiting for player...</div>
+
+            <!-- Invited player slots -->
+            {#each invitations as invitation}
+              <div class="player-slot pending">
+                {#if invitation.invitedUser.image}
+                  <img src={invitation.invitedUser.image} alt={invitation.invitedUser.name} class="player-avatar" />
+                {:else}
+                  <div class="player-icon">{invitation.invitedUser.name?.charAt(0) || '?'}</div>
+                {/if}
+                <div class="player-info">
+                  <div class="player-name">{invitation.invitedUser.name}</div>
+                  <div class="player-status">Invited (Pending)</div>
+                </div>
               </div>
-            </div>
-            <div class="player-slot empty">
-              <div class="player-icon">⭕</div>
-              <div class="player-info">
-                <div class="player-name">Waiting for player...</div>
+            {/each}
+
+            <!-- Empty slots -->
+            {#each Array(3 - invitations.length) as _, i}
+              <div class="player-slot empty">
+                <div class="player-icon">⭕</div>
+                <div class="player-info">
+                  <div class="player-name">Waiting for player...</div>
+                </div>
               </div>
-            </div>
-            <div class="player-slot empty">
-              <div class="player-icon">⭕</div>
-              <div class="player-info">
-                <div class="player-name">Waiting for player...</div>
-              </div>
-            </div>
+            {/each}
           </div>
         </div>
 
         <div class="lobby-actions">
           {#if isCreator}
             <button class="btn-primary" disabled>
-              Waiting for Players (1/4)
+              Waiting for Players ({totalPlayers}/4)
             </button>
             <p class="help-text">
               Share the game ID with your friends to invite them to join!
@@ -423,6 +477,40 @@
     max-width: 400px;
   }
 
+  .invite-message {
+    position: absolute;
+    top: -2.5rem;
+    right: 0;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .invite-message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  .invite-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .invite-input {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -436,6 +524,12 @@
     outline: none;
     border-color: #4285f4;
     box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+  }
+
+  .invite-input:disabled {
+    background: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
   }
 
   .search-dropdown {
@@ -566,12 +660,25 @@
     border-style: solid;
   }
 
+  .player-slot.pending {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-style: solid;
+  }
+
   .player-slot.empty {
     opacity: 0.6;
   }
 
   .player-icon {
     font-size: 2.5rem;
+  }
+
+  .player-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
   }
 
   .player-info {
