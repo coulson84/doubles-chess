@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SignIn, SignOut } from "@auth/sveltekit/components";
   import type { PageData } from "./$types";
+  import { goto } from "$app/navigation";
 
   export let data: PageData;
 
@@ -22,16 +23,16 @@
 
       if (response.ok) {
         const { game } = await response.json();
-        // Reload page to show new game in list
-        window.location.reload();
+        // Navigate to the new game's page
+        goto(`/games/${game.id}`);
       } else {
         const { error } = await response.json();
         alert(`Failed to create game: ${error}`);
+        isCreatingGame = false;
       }
     } catch (error) {
       console.error('Error creating game:', error);
       alert('An error occurred while creating the game');
-    } finally {
       isCreatingGame = false;
     }
   }
@@ -124,7 +125,7 @@
                   <p><strong>Last Updated:</strong> {formatDate(game.updatedAt)}</p>
                 </div>
                 <div class="game-actions-row">
-                  <button class="btn-primary">View Game</button>
+                  <a href="/games/{game.id}" class="btn-primary">View Game</a>
                 </div>
               </div>
             {/each}
@@ -409,6 +410,9 @@
     transition: background 0.2s;
     font-weight: 500;
     flex: 1;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
   }
 
   .btn-primary:hover {
