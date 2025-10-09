@@ -13,6 +13,7 @@ Chess Doubles is a web application built with SvelteKit featuring Google OAuth a
 - **Framework**: SvelteKit (latest) with TypeScript
 - **Authentication**: Auth.js (formerly NextAuth.js) with Google OAuth provider
 - **Database**: PostgreSQL with Knex.js for query building and migrations
+- **Notifications**: Web Push API with VAPID authentication
 - **Build Tool**: Vite
 - **Node Version**: 22.x (managed via fnm)
 - **Styling**: Scoped CSS within Svelte components
@@ -26,9 +27,26 @@ chess-doubles-sveltekit/
 │   │   ├── auth/
 │   │   │   └── [...auth]/
 │   │   │       └── +server.ts    # Auth.js API route handler (GET/POST)
+│   │   ├── api/
+│   │   │   ├── notifications/
+│   │   │   │   ├── subscribe/+server.ts        # Subscribe to push notifications
+│   │   │   │   └── vapid-public-key/+server.ts # Get VAPID public key
+│   │   │   ├── games/[gameId]/invite/+server.ts # Send game invitations
+│   │   │   └── invitations/[id]/respond/+server.ts # Accept/decline invitations
 │   │   ├── +page.svelte          # Main landing page with auth UI
 │   │   ├── +page.server.ts       # Server-side session loading
 │   │   └── +layout.svelte        # Root layout component
+│   ├── lib/
+│   │   ├── notifications/
+│   │   │   ├── types.ts                    # Notification type definitions
+│   │   │   ├── push.server.ts              # Server-side push notification logic
+│   │   │   ├── game-notifications.server.ts # Game-specific notifications
+│   │   │   ├── client.ts                   # Client-side notification utilities
+│   │   │   └── register-sw.ts              # Service worker registration
+│   │   └── components/
+│   │       ├── NotificationPrompt.svelte   # Notification permission prompt (production only)
+│   │       └── NotificationToggle.svelte   # Manual notification toggle component
+│   ├── service-worker.js          # Service worker for handling push notifications
 │   ├── hooks.server.ts            # Auth.js server hooks for session access
 │   └── app.html                   # HTML template with %sveltekit.head% and %sveltekit.body%
 ├── db/
@@ -46,6 +64,91 @@ chess-doubles-sveltekit/
 ```
 
 ## Key Features
+
+### Push Notification System
+
+The app includes a comprehensive web push notification system for real-time user engagement:
+
+#### Architecture
+
+1. **Service Worker** (`src/service-worker.js`):
+   - Handles push events from the server
+   - Displays notifications to users
+   - Manages notification clicks and navigation
+   - Auto-registered by SvelteKit in production builds
+
+2. **Push Subscription Management**:
+   - Users can subscribe/unsubscribe to notifications
+   - Subscriptions stored in `push_subscriptions` table
+   - Automatic cleanup of expired subscriptions
+   - Uses Web Push API with VAPID authentication
+
+3. **Notification Types**:
+   - `game_invite` - User invited to a chess game
+   - `game_move` - Opponent made a move (user's turn)
+   - `friend_request` - New friend request received
+   - `game_started` - Game has started
+   - `game_ended` - Game has ended
+
+#### Implementation
+
+**Server-Side** (`src/lib/notifications/`):
+- `push.server.ts` - Core push notification sending logic with VAPID
+- `game-notifications.server.ts` - Game-specific notification helpers
+- `types.ts` - TypeScript definitions for notifications
+
+**Client-Side**:
+- `client.ts` - Browser notification permission and subscription
+- `NotificationPrompt.svelte` - Dismissable popup for permission (production only)
+- Automatic service worker registration in production
+
+**API Endpoints**:
+- `POST /api/notifications/subscribe` - Subscribe to push notifications
+- `DELETE /api/notifications/subscribe` - Unsubscribe from notifications
+- `GET /api/notifications/vapid-public-key` - Get public VAPID key
+
+#### Usage Examples
+
+**Send game invitation notification:**
+```typescript
+import { notifyGameInvite } from '$lib/notifications/game-notifications.server';
+
+await notifyGameInvite(gameId, invitedUserId, inviterName);
+```
+
+**Send move notification:**
+```typescript
+import { notifyGameMove } from '$lib/notifications/game-notifications.server';
+
+await notifyGameMove(gameId, [player1Id, player2Id], movedByName);
+```
+
+**Invite user to game (includes notification):**
+```typescript
+const response = await fetch(`/api/games/${gameId}/invite`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId: invitedUserId })
+});
+```
+
+#### Development vs Production
+
+- **Development**: Notifications disabled to avoid Chrome permission issues
+- **Production**: Full notification support with automatic service worker registration
+- Test locally by setting `import.meta.env.DEV = false` or deploy to production
+
+#### VAPID Key Generation
+
+```bash
+# Generate VAPID keys (run once)
+npx web-push generate-vapid-keys
+
+# Add output to .env:
+VAPID_PUBLIC_KEY=<public-key>
+VAPID_PRIVATE_KEY=<private-key>
+VAPID_SUBJECT=mailto:your@email.com
+```
 
 ### Authentication Flow
 
@@ -82,6 +185,10 @@ chess-doubles-sveltekit/
 2. **accounts** - OAuth provider account data (linked to users)
 3. **sessions** - Active user sessions with expiration
 4. **verification_token** - Email verification tokens (composite primary key)
+5. **push_subscriptions** - Web push notification subscriptions per user
+6. **game_invitations** - Game invitation tracking (pending, accepted, declined)
+7. **games** - Chess game state and metadata
+8. **friends** - Friend relationships between users
 
 ## Essential Commands
 
@@ -154,6 +261,12 @@ npx knex seed:run
 - `DB_PASSWORD`: PostgreSQL password
 - `DB_HOST`: PostgreSQL host (default: localhost)
 - `DB_PORT`: PostgreSQL port (default: 5432)
+
+**Push Notifications**
+
+- `VAPID_PUBLIC_KEY`: Public key for VAPID authentication (generate with `npx web-push generate-vapid-keys`)
+- `VAPID_PRIVATE_KEY`: Private key for VAPID authentication
+- `VAPID_SUBJECT`: Contact email for push service (e.g., `mailto:admin@example.com`)
 
 ### Google OAuth Setup
 
