@@ -14,11 +14,11 @@
   async function createGame() {
     isCreatingGame = true;
     try {
-      const response = await fetch('/api/games', {
-        method: 'POST',
+      const response = await fetch("/api/games", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
@@ -31,22 +31,22 @@
         isCreatingGame = false;
       }
     } catch (error) {
-      console.error('Error creating game:', error);
-      alert('An error occurred while creating the game');
+      console.error("Error creating game:", error);
+      alert("An error occurred while creating the game");
       isCreatingGame = false;
     }
   }
 
   function getStatusDisplay(status: string): string {
     switch (status) {
-      case 'awaitingPlayers':
-        return 'Awaiting Players';
-      case 'readyToStart':
-        return 'Ready to Start';
-      case 'inProgress':
-        return 'In Progress';
-      case 'complete':
-        return 'Complete';
+      case "awaitingPlayers":
+        return "Awaiting Players";
+      case "readyToStart":
+        return "Ready to Start";
+      case "inProgress":
+        return "In Progress";
+      case "complete":
+        return "Complete";
       default:
         return status;
     }
@@ -54,16 +54,16 @@
 
   function getStatusColor(status: string): string {
     switch (status) {
-      case 'awaitingPlayers':
-        return '#ffc107';
-      case 'readyToStart':
-        return '#17a2b8';
-      case 'inProgress':
-        return '#007bff';
-      case 'complete':
-        return '#28a745';
+      case "awaitingPlayers":
+        return "#ffc107";
+      case "readyToStart":
+        return "#17a2b8";
+      case "inProgress":
+        return "#007bff";
+      case "complete":
+        return "#28a745";
       default:
-        return '#6c757d';
+        return "#6c757d";
     }
   }
 
@@ -99,14 +99,17 @@
           on:click={createGame}
           disabled={isCreatingGame}
         >
-          {isCreatingGame ? 'Creating...' : 'Create New Game'}
+          {isCreatingGame ? "Creating..." : "Create New Game"}
         </button>
       </div>
 
       <div class="content">
         <h2>Your Games</h2>
         {#if games.length === 0}
-          <p class="no-games">You haven't created any games yet. Click "Create New Game" to get started!</p>
+          <p class="no-games">
+            You haven't created any games yet. Click "Create New Game" to get
+            started!
+          </p>
         {:else}
           <div class="games-list">
             {#each games as game}
@@ -122,7 +125,10 @@
                 </div>
                 <div class="game-details">
                   <p><strong>Created:</strong> {formatDate(game.createdAt)}</p>
-                  <p><strong>Last Updated:</strong> {formatDate(game.updatedAt)}</p>
+                  <p>
+                    <strong>Last Updated:</strong>
+                    {formatDate(game.updatedAt)}
+                  </p>
                 </div>
                 <div class="game-actions-row">
                   <a href="/games/{game.id}" class="btn-primary">View Game</a>
@@ -144,57 +150,7 @@
       <p>Please sign in with your Google account to continue</p>
 
       <div class="chess-battle">
-        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
-          <!-- Chessboard pattern background -->
-          <defs>
-            <pattern id="checkerboard" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-              <rect width="20" height="20" fill="#e8e8e8"/>
-              <rect x="20" y="0" width="20" height="20" fill="#d0d0d0"/>
-              <rect x="0" y="20" width="20" height="20" fill="#d0d0d0"/>
-              <rect x="20" y="20" width="20" height="20" fill="#e8e8e8"/>
-            </pattern>
-          </defs>
-          <rect width="400" height="300" fill="url(#checkerboard)"/>
-
-          <!-- White Pawns (Team 1) -->
-          <!-- Left white pawn -->
-          <g transform="translate(70, 150)">
-            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333"/>
-            <circle cx="0" cy="0" r="8" fill="#fff" stroke="#333" stroke-width="2"/>
-            <rect x="-6" y="0" width="12" height="35" fill="#fff" stroke="#333" stroke-width="2"/>
-            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#fff" stroke="#333" stroke-width="2"/>
-          </g>
-
-          <!-- Right white pawn (slightly forward) -->
-          <g transform="translate(130, 140)">
-            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333" opacity="0.3"/>
-            <circle cx="0" cy="0" r="8" fill="#fff" stroke="#333" stroke-width="2"/>
-            <rect x="-6" y="0" width="12" height="35" fill="#fff" stroke="#333" stroke-width="2"/>
-            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#fff" stroke="#333" stroke-width="2"/>
-          </g>
-
-          <!-- Black Pawns (Team 2) -->
-          <!-- Left black pawn (slightly forward) -->
-          <g transform="translate(270, 140)">
-            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333" opacity="0.3"/>
-            <circle cx="0" cy="0" r="8" fill="#333" stroke="#333" stroke-width="2"/>
-            <rect x="-6" y="0" width="12" height="35" fill="#333" stroke="#333" stroke-width="2"/>
-            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#333" stroke="#333" stroke-width="2"/>
-          </g>
-
-          <!-- Right black pawn -->
-          <g transform="translate(330, 150)">
-            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333"/>
-            <circle cx="0" cy="0" r="8" fill="#333" stroke="#333" stroke-width="2"/>
-            <rect x="-6" y="0" width="12" height="35" fill="#333" stroke="#333" stroke-width="2"/>
-            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#333" stroke="#333" stroke-width="2"/>
-          </g>
-
-          <!-- Battle effects -->
-          <circle cx="200" cy="150" r="20" fill="#ffd700" opacity="0.3"/>
-          <circle cx="200" cy="150" r="15" fill="#ffa500" opacity="0.4"/>
-          <circle cx="200" cy="150" r="10" fill="#ff4500" opacity="0.5"/>
-        </svg>
+        <img src="/title_image.jpg" alt="Chess Battle" />
       </div>
 
       <SignIn provider="google" class="sign-in-btn">
@@ -237,7 +193,7 @@
     padding: 2rem;
   }
 
-  .chess-battle svg {
+  .chess-battle img {
     width: 100%;
     height: auto;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
