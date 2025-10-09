@@ -49,6 +49,73 @@
   // Determine if we should show lobby or game board
   $: isLobby = game.status === 'awaitingPlayers' || game.status === 'readyToStart';
   $: isCreator = user?.id === game.createdBy;
+
+  // Invite players functionality
+  type SearchUser = {
+    id: string;
+    name: string;
+    email: string;
+    image?: string;
+    is_friend: boolean;
+  };
+
+  let searchQuery = '';
+  let searchResults: SearchUser[] = [];
+  let isSearching = false;
+  let showDropdown = false;
+  let searchTimeout: number;
+
+  async function searchUsers(query: string) {
+    isSearching = true;
+    try {
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        searchResults = data.users || [];
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      isSearching = false;
+    }
+  }
+
+  function handleSearchInput(e: Event) {
+    const target = e.target as HTMLInputElement;
+    searchQuery = target.value;
+
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Debounce search - wait 300ms after user stops typing
+    searchTimeout = setTimeout(() => {
+      searchUsers(searchQuery);
+    }, 300) as unknown as number;
+  }
+
+  function handleSearchFocus() {
+    showDropdown = true;
+    // Load friends if search is empty
+    if (!searchQuery) {
+      searchUsers('');
+    }
+  }
+
+  function handleSearchBlur() {
+    // Delay to allow click events on dropdown items
+    setTimeout(() => {
+      showDropdown = false;
+    }, 200);
+  }
+
+  async function inviteUser(userId: string) {
+    // TODO: Implement invite API call
+    alert(`Inviting user ${userId} - Coming soon!`);
+    searchQuery = '';
+    showDropdown = false;
+  }
 </script>
 
 <div class="container">
@@ -102,7 +169,61 @@
         </div>
 
         <div class="players-section">
-          <h2>Players</h2>
+          <div class="players-header">
+            <h2>Players</h2>
+            <div class="invite-container">
+              <input
+                type="text"
+                placeholder="Invite players"
+                class="invite-input"
+                bind:value={searchQuery}
+                on:input={handleSearchInput}
+                on:focus={handleSearchFocus}
+                on:blur={handleSearchBlur}
+              />
+              {#if showDropdown}
+                <div class="search-dropdown">
+                  {#if isSearching}
+                    <div class="search-loading">Searching...</div>
+                  {:else if searchResults.length === 0}
+                    <div class="search-empty">
+                      {#if searchQuery.trim()}
+                        No users found
+                      {:else}
+                        Search for players to invite
+                      {/if}
+                    </div>
+                  {:else}
+                    {#each searchResults as user}
+                      <button
+                        class="search-result-item"
+                        on:click={() => inviteUser(user.id)}
+                      >
+                        <div class="result-avatar">
+                          {#if user.image}
+                            <img src={user.image} alt={user.name} />
+                          {:else}
+                            <div class="avatar-placeholder">
+                              {user.name?.charAt(0) || '?'}
+                            </div>
+                          {/if}
+                        </div>
+                        <div class="result-info">
+                          <div class="result-name">
+                            {user.name}
+                            {#if user.is_friend}
+                              <span class="friend-badge">Friend</span>
+                            {/if}
+                          </div>
+                          <div class="result-email">{user.email}</div>
+                        </div>
+                      </button>
+                    {/each}
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          </div>
           <div class="players-grid">
             <div class="player-slot filled">
               <div class="player-icon">👤</div>
@@ -284,6 +405,143 @@
     padding: 2rem;
   }
 
+  .players-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .players-header h2 {
+    margin: 0;
+  }
+
+  .invite-container {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+  }
+
+  .invite-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+
+  .invite-input:focus {
+    outline: none;
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+  }
+
+  .search-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  .search-loading,
+  .search-empty {
+    padding: 1rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  .search-result-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: white;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: left;
+  }
+
+  .search-result-item:hover {
+    background: #f8f9fa;
+  }
+
+  .search-result-item:not(:last-child) {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .result-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .result-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #4285f4;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+  }
+
+  .result-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .result-email {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .friend-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    background: #28a745;
+    color: white;
+    font-size: 0.7rem;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
   .players-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -400,6 +658,16 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 1rem;
+    }
+
+    .players-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1rem;
+    }
+
+    .invite-container {
+      max-width: 100%;
     }
 
     .players-grid {
