@@ -1,7 +1,6 @@
 import "dotenv/config";
 // Update with your config settings.
 
-console.log(process.env)
 /**
  * @type { Object.<string, import("knex").Knex.Config> }
  */

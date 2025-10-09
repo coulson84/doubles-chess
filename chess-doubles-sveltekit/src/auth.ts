@@ -1,7 +1,7 @@
 import { SvelteKitAuth } from '@auth/sveltekit';
 import Google from '@auth/core/providers/google';
 import { AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_SECRET } from '$env/static/private';
-import PostgresAdapter from "@auth/pg-adapter"
+import PostgresUUIDAdapter from './lib/auth-adapter.js';
 import { Pool } from "pg"
 import { DATABASE_HOST, DATABASE_NAME, DATABASE_PASSWORD, DATABASE_PORT, DATABASE_USER } from './env.server';
 
@@ -17,7 +17,7 @@ const pool = new Pool({
 })
 
 export const { handle, signIn, signOut } = SvelteKitAuth({
-	adapter: PostgresAdapter(pool),
+	adapter: PostgresUUIDAdapter(pool),
 	providers: [
 		Google({
 			clientId: AUTH_GOOGLE_ID,

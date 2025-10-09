@@ -1,8 +1,13 @@
+/**
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
 export function up(knex) {
   return knex.schema
     // Create users table
     .createTable('users', (table) => {
-      table.increments('id').primary();
+      table.uuid('id').primary().defaultTo(knex.raw('uuidv7()'));
+      table.uuid('uuid').notNullable().unique().defaultTo(knex.raw('uuidv7()'));
       table.string('name', 255);
       table.string('email', 255);
       table.timestamp('emailVerified').defaultTo(null);
@@ -10,8 +15,8 @@ export function up(knex) {
     })
     // Create accounts table
     .createTable('accounts', (table) => {
-      table.increments('id').primary();
-      table.integer('userId').notNullable();
+      table.uuid('id').primary().defaultTo(knex.raw('uuidv7()'));
+      table.uuid('userId').notNullable().references('id').inTable('users').onDelete('CASCADE');
       table.string('type', 255).notNullable();
       table.string('provider', 255).notNullable();
       table.string('providerAccountId', 255).notNullable();
@@ -25,10 +30,10 @@ export function up(knex) {
     })
     // Create sessions table
     .createTable('sessions', (table) => {
-      table.increments('id').primary();
-      table.integer('userId').notNullable();
+      table.uuid('id').primary().defaultTo(knex.raw('uuidv7()'));
+      table.uuid('userId').notNullable().references('id').inTable('users').onDelete('CASCADE');
       table.timestamp('expires').notNullable();
-      table.string('sessionToken', 255).notNullable();
+      table.string('sessionToken', 255).notNullable().unique();
     })
     // Create verification_token table
     .createTable('verification_token', (table) => {
@@ -39,6 +44,10 @@ export function up(knex) {
     });
 };
 
+/**
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
 export function down(knex) {
   return knex.schema
     .dropTableIfExists('verification_token')
