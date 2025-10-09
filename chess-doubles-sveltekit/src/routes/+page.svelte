@@ -18,6 +18,7 @@
           <img
             src={user.image}
             alt={user.name || "User avatar"}
+            crossorigin="anonymous"
             class="avatar"
           />
         {/if}
