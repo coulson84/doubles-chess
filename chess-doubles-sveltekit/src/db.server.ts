@@ -1,4 +1,4 @@
-import { DATABASE_HOST, DATABASE_NAME, DATABASE_PASSWORD, DATABASE_PORT, DATABASE_USER } from "./env.server";
+import { DATABASE_HOST, DATABASE_NAME, DATABASE_PASSWORD, DATABASE_PORT, DATABASE_USER } from "$lib/env.server";
 import knexLib from 'knex';
 
 const knex = knexLib({

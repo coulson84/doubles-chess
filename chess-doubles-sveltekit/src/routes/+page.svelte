@@ -2,6 +2,7 @@
   import { SignIn, SignOut } from "@auth/sveltekit/components";
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
+  import NotificationPrompt from "$lib/components/NotificationPrompt.svelte";
 
   export let data: PageData;
 
@@ -71,6 +72,8 @@
     return new Date(date).toLocaleString();
   }
 </script>
+
+<NotificationPrompt />
 
 <div class="container">
   {#if user}
