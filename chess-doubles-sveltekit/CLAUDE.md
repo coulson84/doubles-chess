@@ -278,7 +278,7 @@ npx knex seed:run
 - **Add server logic**: Create `+page.server.ts` alongside the page
 - **Add global styles**: Use `:global()` selector or create separate CSS file
 - **Add protected route**: Check session in `+page.server.ts` and redirect if needed
-- **Create database migration**: `npx knex migrate:make migration_name`
+- **Create database migration**: `npx knex migrate:make migration_name` and the convert the created file from commonjs format to esm format
 - **Query database**: Import knex config and use Knex query builder
 - **Add seed data**: Create seed files in `db/seeds/` and run with `npx knex seed:run`
 
