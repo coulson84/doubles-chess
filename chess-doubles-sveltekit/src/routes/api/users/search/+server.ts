@@ -53,7 +53,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       .leftOuterJoin('friends', function() {
         this.on('users.id', '=', 'friends.friendId')
           .orOn('users.id', '=', 'friends.userId')
-          .andOn('friends.status', '=', 'accepted');
+          .andOn('friends.status', '=', knex.raw('?', ['accepted']));
       })
       .where('users.id', '!=', currentUserId)
       .where(function() {
