@@ -1,11 +1,6 @@
 import webpush from 'web-push';
+import { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } from '$lib/env.server';
 import type { ChessNotification, PushSubscription } from './types';
-
-// VAPID keys should be generated once and stored in environment variables
-// Generate keys with: npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 
 console.log('VAPID_PUBLIC_KEY:', VAPID_PUBLIC_KEY ? 'set' : 'not set');
 console.log('VAPID_PRIVATE_KEY:', VAPID_PRIVATE_KEY ? 'set' : 'not set');

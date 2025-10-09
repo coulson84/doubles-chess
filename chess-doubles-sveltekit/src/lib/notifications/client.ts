@@ -5,7 +5,20 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 		throw new Error('Notifications not supported in this browser');
 	}
 
-	return await Notification.requestPermission();
+	console.log('[Notifications] Current permission:', Notification.permission);
+
+	// If already granted or denied, return immediately
+	if (Notification.permission !== 'default') {
+		return Notification.permission;
+	}
+
+	// Request with timeout to detect hanging
+	const permissionPromise = Notification.requestPermission();
+	const timeoutPromise = new Promise<NotificationPermission>((_, reject) => {
+		setTimeout(() => reject(new Error('Permission request timeout - dialog may be blocked')), 10000);
+	});
+
+	return await Promise.race([permissionPromise, timeoutPromise]);
 }
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -118,35 +131,44 @@ export async function getVapidPublicKey(): Promise<string | null> {
 	}
 }
 
-// Complete flow to enable notifications
+// Complete flow to enable notifications (assumes permission already granted)
 export async function enableNotifications(): Promise<{ success: boolean; error?: string }> {
 	try {
-		// Request permission
-		const permission = await requestNotificationPermission();
-		if (permission !== 'granted') {
-			return { success: false, error: 'Permission denied' };
+		console.log('[Notifications] Starting enableNotifications...');
+
+		// Check permission is already granted
+		if (Notification.permission !== 'granted') {
+			return { success: false, error: 'Permission not granted' };
 		}
 
 		// Get VAPID public key
+		console.log('[Notifications] Getting VAPID public key...');
 		const vapidKey = await getVapidPublicKey();
+		console.log('[Notifications] VAPID key received:', vapidKey ? 'yes' : 'no');
 		if (!vapidKey) {
 			return { success: false, error: 'Failed to get VAPID key' };
 		}
 
 		// Subscribe to push notifications
+		console.log('[Notifications] Subscribing to push notifications...');
 		const subscription = await subscribeToPushNotifications(vapidKey);
+		console.log('[Notifications] Subscription result:', subscription ? 'success' : 'failed');
 		if (!subscription) {
 			return { success: false, error: 'Failed to subscribe' };
 		}
 
 		// Save to server
+		console.log('[Notifications] Saving subscription to server...');
 		const saved = await saveSubscriptionToServer(subscription);
+		console.log('[Notifications] Save result:', saved);
 		if (!saved) {
 			return { success: false, error: 'Failed to save subscription' };
 		}
 
+		console.log('[Notifications] Successfully enabled notifications!');
 		return { success: true };
 	} catch (error) {
+		console.error('[Notifications] Error:', error);
 		return { success: false, error: String(error) };
 	}
 }

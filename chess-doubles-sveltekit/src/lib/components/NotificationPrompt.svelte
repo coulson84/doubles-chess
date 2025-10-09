@@ -10,6 +10,13 @@
 	const DISMISS_FOREVER_KEY = 'notification-prompt-dismissed-forever';
 
 	onMount(() => {
+		// Disable in development to avoid Chrome permission issues
+		const isDev = import.meta.env.DEV;
+		if (isDev) {
+			console.log('[NotificationPrompt] Disabled in development mode');
+			return;
+		}
+
 		// Check if notifications are supported
 		if (!('Notification' in window) || !('serviceWorker' in navigator)) {
 			return;
@@ -38,16 +45,42 @@
 		}, 1000);
 	});
 
-	async function handleEnable() {
+	async function handleEnable(event: MouseEvent) {
+		// Prevent any async breaks in the user gesture chain
+		event.preventDefault();
+		event.stopPropagation();
+
 		isEnabling = true;
 		errorMessage = '';
 
-		const result = await enableNotifications();
+		// Request permission immediately in the click handler to preserve user gesture
+		if (!('Notification' in window)) {
+			errorMessage = 'Notifications not supported';
+			isEnabling = false;
+			return;
+		}
 
-		if (result.success) {
-			showPrompt = false;
-		} else {
-			errorMessage = result.error || 'Failed to enable notifications';
+		try {
+			// This must happen synchronously in the click handler
+			const permission = await Notification.requestPermission();
+
+			if (permission !== 'granted') {
+				errorMessage = 'Permission denied';
+				isEnabling = false;
+				return;
+			}
+
+			// Now continue with the rest of the flow
+			const result = await enableNotifications();
+
+			if (result.success) {
+				showPrompt = false;
+			} else {
+				errorMessage = result.error || 'Failed to enable notifications';
+				isEnabling = false;
+			}
+		} catch (error) {
+			errorMessage = String(error);
 			isEnabling = false;
 		}
 	}

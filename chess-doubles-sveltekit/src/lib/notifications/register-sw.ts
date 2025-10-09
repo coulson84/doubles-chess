@@ -7,13 +7,24 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 	}
 
 	try {
-		// SvelteKit automatically registers the service worker from src/service-worker.js
-		// We just need to wait for it to be ready
-		const registration = await navigator.serviceWorker.ready;
-		console.log('Service Worker ready:', registration);
+		// In development, we need to explicitly register the service worker
+		// In production, SvelteKit will automatically register it
+		let registration = await navigator.serviceWorker.getRegistration();
+
+		if (!registration) {
+			console.log('No service worker found, registering...');
+			registration = await navigator.serviceWorker.register('/service-worker.js', {
+				type: 'module'
+			});
+			console.log('Service Worker registered:', registration);
+		} else {
+			console.log('Service Worker already registered:', registration);
+		}
+
+		await registration.update();
 		return registration;
 	} catch (error) {
-		console.error('Service Worker not available:', error);
+		console.error('Service Worker registration failed:', error);
 		return null;
 	}
 }
