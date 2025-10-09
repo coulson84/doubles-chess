@@ -20,10 +20,13 @@ Chess Doubles is a web application built with SvelteKit featuring Google OAuth a
 chess-doubles-sveltekit/
 ├── src/
 │   ├── routes/
+│   │   ├── auth/
+│   │   │   └── [...auth]/
+│   │   │       └── +server.ts    # Auth.js API route handler (GET/POST)
 │   │   ├── +page.svelte          # Main landing page with auth UI
 │   │   ├── +page.server.ts       # Server-side session loading
 │   │   └── +layout.svelte        # Root layout component
-│   ├── hooks.server.ts            # Auth.js configuration and setup
+│   ├── hooks.server.ts            # Auth.js server hooks for session access
 │   └── app.html                   # HTML template with %sveltekit.head% and %sveltekit.body%
 ├── static/                        # Static assets (favicon, etc.)
 ├── .env                          # Environment variables (not in git)
@@ -130,11 +133,19 @@ npm run check:watch
 
 ## Important Implementation Details
 
-### hooks.server.ts
+### Authentication Setup
+
+**hooks.server.ts**
 - Exports the `handle` function from `SvelteKitAuth`
-- Configures Google OAuth provider with environment variables
-- Sets `trustHost: true` for local development
+- Provides session access via `event.locals.auth()` on every request
+- Configures providers and secrets
 - This file runs on every server request
+
+**auth/[...auth]/+server.ts**
+- Exports `GET` and `POST` handlers from `SvelteKitAuth`
+- Creates the actual OAuth endpoints (`/auth/signin/google`, `/auth/callback/google`, etc.)
+- Must have same configuration as `hooks.server.ts`
+- Handles all OAuth flows and redirects
 
 ### +page.server.ts
 - Uses `PageServerLoad` type for type safety
