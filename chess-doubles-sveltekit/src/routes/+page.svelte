@@ -73,11 +73,7 @@
         </div>
       </div>
 
-      <SignIn
-        provider="google"
-        class="sign-in-btn"
-        signInPage="/auth/signin/google"
-      >
+      <SignIn provider="google" class="sign-in-btn">
         <span slot="submitButton">Sign in with Google</span>
       </SignIn>
     </div>
