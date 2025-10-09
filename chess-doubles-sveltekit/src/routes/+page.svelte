@@ -6,6 +6,33 @@
 
   $: session = data.session;
   $: user = session?.user;
+
+  let isCreatingGame = false;
+
+  async function createGame() {
+    isCreatingGame = true;
+    try {
+      const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const { game } = await response.json();
+        alert(`Game created successfully! Game ID: ${game.id}`);
+      } else {
+        const { error } = await response.json();
+        alert(`Failed to create game: ${error}`);
+      }
+    } catch (error) {
+      console.error('Error creating game:', error);
+      alert('An error occurred while creating the game');
+    } finally {
+      isCreatingGame = false;
+    }
+  }
 </script>
 
 <div class="container">
@@ -27,6 +54,16 @@
         <h2>Your Profile</h2>
         <p><strong>Name:</strong> {user.name}</p>
         <p><strong>Email:</strong> {user.email}</p>
+      </div>
+
+      <div class="game-actions">
+        <button
+          class="create-game-btn"
+          on:click={createGame}
+          disabled={isCreatingGame}
+        >
+          {isCreatingGame ? 'Creating...' : 'Create New Game'}
+        </button>
       </div>
 
       <div class="content">
@@ -58,19 +95,58 @@
       <h1>Welcome to Chess Doubles</h1>
       <p>Please sign in with your Google account to continue</p>
 
-      <div class="features">
-        <div class="feature">
-          <h3>🔒 Secure Authentication</h3>
-          <p>Sign in safely with Google OAuth</p>
-        </div>
-        <div class="feature">
-          <h3>⚡ Fast & Modern</h3>
-          <p>Built with SvelteKit for optimal performance</p>
-        </div>
-        <div class="feature">
-          <h3>🎯 Simple to Use</h3>
-          <p>Get started in seconds</p>
-        </div>
+      <div class="chess-battle">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+          <!-- Chessboard pattern background -->
+          <defs>
+            <pattern id="checkerboard" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+              <rect width="20" height="20" fill="#e8e8e8"/>
+              <rect x="20" y="0" width="20" height="20" fill="#d0d0d0"/>
+              <rect x="0" y="20" width="20" height="20" fill="#d0d0d0"/>
+              <rect x="20" y="20" width="20" height="20" fill="#e8e8e8"/>
+            </pattern>
+          </defs>
+          <rect width="400" height="300" fill="url(#checkerboard)"/>
+
+          <!-- White Pawns (Team 1) -->
+          <!-- Left white pawn -->
+          <g transform="translate(70, 150)">
+            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333"/>
+            <circle cx="0" cy="0" r="8" fill="#fff" stroke="#333" stroke-width="2"/>
+            <rect x="-6" y="0" width="12" height="35" fill="#fff" stroke="#333" stroke-width="2"/>
+            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#fff" stroke="#333" stroke-width="2"/>
+          </g>
+
+          <!-- Right white pawn (slightly forward) -->
+          <g transform="translate(130, 140)">
+            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333" opacity="0.3"/>
+            <circle cx="0" cy="0" r="8" fill="#fff" stroke="#333" stroke-width="2"/>
+            <rect x="-6" y="0" width="12" height="35" fill="#fff" stroke="#333" stroke-width="2"/>
+            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#fff" stroke="#333" stroke-width="2"/>
+          </g>
+
+          <!-- Black Pawns (Team 2) -->
+          <!-- Left black pawn (slightly forward) -->
+          <g transform="translate(270, 140)">
+            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333" opacity="0.3"/>
+            <circle cx="0" cy="0" r="8" fill="#333" stroke="#333" stroke-width="2"/>
+            <rect x="-6" y="0" width="12" height="35" fill="#333" stroke="#333" stroke-width="2"/>
+            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#333" stroke="#333" stroke-width="2"/>
+          </g>
+
+          <!-- Right black pawn -->
+          <g transform="translate(330, 150)">
+            <ellipse cx="0" cy="50" rx="15" ry="5" fill="#333"/>
+            <circle cx="0" cy="0" r="8" fill="#333" stroke="#333" stroke-width="2"/>
+            <rect x="-6" y="0" width="12" height="35" fill="#333" stroke="#333" stroke-width="2"/>
+            <ellipse cx="0" cy="35" rx="12" ry="8" fill="#333" stroke="#333" stroke-width="2"/>
+          </g>
+
+          <!-- Battle effects -->
+          <circle cx="200" cy="150" r="20" fill="#ffd700" opacity="0.3"/>
+          <circle cx="200" cy="150" r="15" fill="#ffa500" opacity="0.4"/>
+          <circle cx="200" cy="150" r="10" fill="#ff4500" opacity="0.5"/>
+        </svg>
       </div>
 
       <SignIn provider="google" class="sign-in-btn">
@@ -107,27 +183,16 @@
     margin-bottom: 3rem;
   }
 
-  .features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    margin: 3rem 0;
-  }
-
-  .feature {
+  .chess-battle {
+    margin: 3rem auto;
+    max-width: 500px;
     padding: 2rem;
-    border-radius: 8px;
-    background: #f5f5f5;
   }
 
-  .feature h3 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    color: #333;
-  }
-
-  .feature p {
-    color: #666;
+  .chess-battle svg {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
   }
 
   /* Logged In Styles */
@@ -173,6 +238,32 @@
   .user-info p {
     margin: 0.5rem 0;
     color: #555;
+  }
+
+  .game-actions {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .create-game-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+  }
+
+  .create-game-btn:hover:not(:disabled) {
+    background: #218838;
+  }
+
+  .create-game-btn:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
   }
 
   .content {

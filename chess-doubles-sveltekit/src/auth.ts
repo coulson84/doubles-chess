@@ -25,5 +25,13 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 		})
 	],
 	secret: AUTH_SECRET,
-	trustHost: true
+	trustHost: true,
+	callbacks: {
+		async session({ session, user }) {
+			if (session.user) {
+				session.user.id = user.id;
+			}
+			return session;
+		}
+	}
 });
