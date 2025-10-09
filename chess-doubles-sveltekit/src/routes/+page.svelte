@@ -6,6 +6,7 @@
 
   $: session = data.session;
   $: user = session?.user;
+  $: games = data.games || [];
 
   let isCreatingGame = false;
 
@@ -21,7 +22,8 @@
 
       if (response.ok) {
         const { game } = await response.json();
-        alert(`Game created successfully! Game ID: ${game.id}`);
+        // Reload page to show new game in list
+        window.location.reload();
       } else {
         const { error } = await response.json();
         alert(`Failed to create game: ${error}`);
@@ -32,6 +34,40 @@
     } finally {
       isCreatingGame = false;
     }
+  }
+
+  function getStatusDisplay(status: string): string {
+    switch (status) {
+      case 'awaitingPlayers':
+        return 'Awaiting Players';
+      case 'readyToStart':
+        return 'Ready to Start';
+      case 'inProgress':
+        return 'In Progress';
+      case 'complete':
+        return 'Complete';
+      default:
+        return status;
+    }
+  }
+
+  function getStatusColor(status: string): string {
+    switch (status) {
+      case 'awaitingPlayers':
+        return '#ffc107';
+      case 'readyToStart':
+        return '#17a2b8';
+      case 'inProgress':
+        return '#007bff';
+      case 'complete':
+        return '#28a745';
+      default:
+        return '#6c757d';
+    }
+  }
+
+  function formatDate(date: string | Date): string {
+    return new Date(date).toLocaleString();
   }
 </script>
 
@@ -67,22 +103,33 @@
       </div>
 
       <div class="content">
-        <h2>Dashboard</h2>
-        <p>You are now logged in and can access the application.</p>
-        <div class="card-grid">
-          <div class="card">
-            <h3>📊 Analytics</h3>
-            <p>View your activity and statistics</p>
+        <h2>Your Games</h2>
+        {#if games.length === 0}
+          <p class="no-games">You haven't created any games yet. Click "Create New Game" to get started!</p>
+        {:else}
+          <div class="games-list">
+            {#each games as game}
+              <div class="game-card">
+                <div class="game-header">
+                  <h3>Game {game.id.slice(0, 8)}</h3>
+                  <span
+                    class="status-badge"
+                    style="background-color: {getStatusColor(game.status)}"
+                  >
+                    {getStatusDisplay(game.status)}
+                  </span>
+                </div>
+                <div class="game-details">
+                  <p><strong>Created:</strong> {formatDate(game.createdAt)}</p>
+                  <p><strong>Last Updated:</strong> {formatDate(game.updatedAt)}</p>
+                </div>
+                <div class="game-actions-row">
+                  <button class="btn-primary">View Game</button>
+                </div>
+              </div>
+            {/each}
           </div>
-          <div class="card">
-            <h3>⚙️ Settings</h3>
-            <p>Manage your account preferences</p>
-          </div>
-          <div class="card">
-            <h3>📝 Content</h3>
-            <p>Access your saved content</p>
-          </div>
-        </div>
+        {/if}
       </div>
 
       <SignOut class="sign-out-btn">
@@ -276,37 +323,96 @@
     color: #333;
   }
 
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
+  .no-games {
+    text-align: center;
+    color: #666;
+    font-size: 1.1rem;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
   }
 
-  .card {
+  .games-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .game-card {
     background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
     padding: 1.5rem;
     transition:
       transform 0.2s,
-      box-shadow 0.2s;
+      box-shadow 0.2s,
+      border-color 0.2s;
   }
 
-  .card:hover {
+  .game-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    border-color: #4285f4;
   }
 
-  .card h3 {
-    margin: 0 0 0.5rem 0;
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .game-header h3 {
+    margin: 0;
     color: #333;
     font-size: 1.25rem;
+    font-family: monospace;
   }
 
-  .card p {
-    margin: 0;
-    color: #666;
+  .status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .game-details {
+    margin-bottom: 1rem;
+  }
+
+  .game-details p {
+    margin: 0.5rem 0;
+    color: #555;
+    font-size: 0.95rem;
+  }
+
+  .game-actions-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .btn-primary {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .btn-primary:hover {
+    background: #357ae8;
   }
 
   /* Button Styles */
