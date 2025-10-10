@@ -42,16 +42,16 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 
 		await knex.transaction(async (trx) => {
 			// Find the player's invitation
-			const invitation = await trx('game_invitations')
-				.where({ gameId, invitedUserId: userId })
+			const player = await trx('game_players')
+				.where({ gameId, userId })
 				.first();
 
-			if (!invitation) {
+			if (!player) {
 				throw new Error('Player is not part of this game');
 			}
 
 			// Delete the invitation (eject the player)
-			await trx('game_invitations').where({ id: invitation.id }).delete();
+			await trx('game_invitations').where({ invitedPlayerId: player.userId, gameId }).delete();
 
 			// Check remaining accepted invitations
 			const remainingAccepted = await trx('game_invitations')

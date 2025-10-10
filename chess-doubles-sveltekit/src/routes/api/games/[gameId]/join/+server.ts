@@ -34,20 +34,24 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 
 		await knex.transaction(async (trx) => {
 			// Check if user already has an invitation
+			const inTheGame = await trx('game_players')
+				.where({ gameId, userId: session.user.id })
+				.first();
+
+			if (inTheGame) {
+				throw new Error('You have already joined this game');
+			}
+
 			const existingInvite = await trx('game_invitations')
 				.where({ gameId, invitedUserId: session.user.id })
 				.first();
 
 			if (existingInvite) {
-				if (existingInvite.status === 'accepted') {
-					throw new Error('You have already joined this game');
-				} else if (existingInvite.status === 'pending') {
-					throw new Error('You have already been invited to this game');
-				} else if (existingInvite.status === 'declined') {
+				if (existingInvite.status === 'pending' || existingInvite.status === 'declined') {
 					// Determine team assignment for rejoin (always random)
 					// Get current team counts
-					const teamCounts = await trx('game_invitations')
-						.where({ gameId, status: 'accepted' })
+					const teamCounts = await trx('game_players')
+						.where({ gameId })
 						.select('team')
 						.then(rows => {
 							const counts = { white: 0, black: 0 };
@@ -68,13 +72,12 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 						assignedTeam = Math.random() < 0.5 ? 'white' : 'black';
 					}
 
-					// Allow rejoining if previously declined
+					// Update existing invitation to accepted
 					await trx('game_invitations')
-						.where({ id: existingInvite.id })
+						.where({ gameId, invitedUserId: session.user.id })
 						.update({
 							status: 'accepted',
 							respondedAt: trx.fn.now(),
-							team: assignedTeam
 						});
 
 					// Add player to game_players table
@@ -90,21 +93,21 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			}
 
 			// Check if game is already full (3 accepted invitations)
-			const acceptedInvites = await trx('game_invitations')
-				.where({ gameId, status: 'accepted' })
+			const players = await trx('game_players')
+				.where({ gameId })
 				.select('id', 'team')
 				.forUpdate();
 
-			if (acceptedInvites.length >= 3) {
+			if (players.length >= 4) {
 				throw new Error('Game is full. All player slots have been filled.');
 			}
 
 			// Determine team assignment for new join (always random)
 			// Get current team counts
 			const teamCounts = { white: 0, black: 0 };
-			acceptedInvites.forEach(invite => {
-				if (invite.team === 'white') teamCounts.white++;
-				if (invite.team === 'black') teamCounts.black++;
+			players.forEach(player => {
+				if (player.team === 'white') teamCounts.white++;
+				if (player.team === 'black') teamCounts.black++;
 			});
 
 			// Assign to team with fewer players, or random if equal
@@ -118,14 +121,10 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			}
 
 			// Create a new accepted invitation
-			await trx('game_invitations').insert({
-				gameId,
-				invitedBy: game.createdBy,
-				invitedUserId: session.user.id,
+			await trx('game_invitations').update({
 				status: 'accepted',
 				respondedAt: trx.fn.now(),
-				team: assignedTeam
-			});
+			}).where({ gameId, invitedUserId: session.user.id });
 
 			// Add player to game_players table
 			await trx('game_players').insert({
@@ -136,7 +135,7 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			});
 
 			// If this is the 3rd player, update game status to readyToStart
-			if (acceptedInvites.length === 2) {
+			if (players.length + 1 === 4) {
 				await trx('games').where({ id: gameId }).update({ status: 'readyToStart' });
 			}
 		});

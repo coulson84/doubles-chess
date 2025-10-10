@@ -47,22 +47,22 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			// If accepting, check if game is already full
 			if (status === 'accepted') {
 				// Lock and count existing accepted invitations
-				const acceptedInvites = await trx('game_invitations')
-					.where({ gameId: invitation.gameId, status: 'accepted' })
+				const currentPlayers = await trx('game_players')
+					.where({ gameId: invitation.gameId })
 					.select('id')
 					.forUpdate();
 
-				const acceptedCount = acceptedInvites.length;
+				const acceptedCount = currentPlayers.length;
 
-				// If already 3 players accepted, game is full
-				if (acceptedCount >= 3) {
+				// If already 4 players accepted, game is full
+				if (acceptedCount >= 4) {
 					throw new Error('Game is full. All player slots have been filled.');
 				}
 
 				// Automatically assign team (always random on accept)
 				// Get current team counts
-				const teamCounts = await trx('game_invitations')
-					.where({ gameId: invitation.gameId, status: 'accepted' })
+				const teamCounts = await trx('game_players')
+					.where({ gameId: invitation.gameId, })
 					.select('team')
 					.then(rows => {
 						const counts = { white: 0, black: 0 };
@@ -90,7 +90,6 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 					.update({
 						status,
 						respondedAt: db.fn.now(),
-						team: assignedTeam
 					});
 
 				// Add player to game_players table
@@ -112,15 +111,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 			// If accepted, check if this was the 3rd player to accept
 			if (status === 'accepted') {
-				const acceptedInvites = await trx('game_invitations')
-					.where({ gameId: invitation.gameId, status: 'accepted' })
+				const playerCount = await trx('game_players')
+					.where({ gameId: invitation.gameId })
 					.count('* as count')
 					.first();
 
-				const acceptedCount = Number(acceptedInvites?.count || 0);
+				const acceptedCount = Number(playerCount?.count || 0);
 
-				// If we now have 3 accepted invitations (creator + 3 players = 4 total)
-				if (acceptedCount === 3) {
+				// If we now have 4 accepted invitations (creator + 3 players = 4 total)
+				if (acceptedCount === 4) {
 					await trx('games')
 						.where({ id: invitation.gameId })
 						.update({ status: 'readyToStart' });

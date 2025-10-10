@@ -16,7 +16,6 @@ type GameInvitation = {
 	invitedBy: string;
 	invitedUserId: string;
 	status: 'pending' | 'accepted' | 'declined';
-	team: 'white' | 'black' | null;
 	createdAt: Date;
 	respondedAt: Date | null;
 	invitedUser: {
@@ -57,8 +56,7 @@ export const load: PageServerLoad = async (event) => {
 
 		// Load pending and accepted invitations with user details
 		const invitations = await knex('game_invitations')
-			.where({ gameId })
-			.whereIn('status', ['pending', 'accepted'])
+			.where({ gameId, status: 'pending' })
 			.join('users', 'game_invitations.invitedUserId', 'users.id')
 			.select(
 				'game_invitations.id',
@@ -66,7 +64,6 @@ export const load: PageServerLoad = async (event) => {
 				'game_invitations.invitedBy',
 				'game_invitations.invitedUserId',
 				'game_invitations.status',
-				'game_invitations.team',
 				'game_invitations.createdAt',
 				'game_invitations.respondedAt',
 				'users.id as user_id',
@@ -81,7 +78,6 @@ export const load: PageServerLoad = async (event) => {
 			invitedBy: inv.invitedBy,
 			invitedUserId: inv.invitedUserId,
 			status: inv.status,
-			team: inv.team,
 			createdAt: inv.createdAt,
 			respondedAt: inv.respondedAt,
 			invitedUser: {

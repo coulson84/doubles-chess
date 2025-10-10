@@ -45,30 +45,30 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 
 		await knex.transaction(async (trx) => {
 			// Find the player's invitation
-			const invitation = await trx('game_invitations')
-				.where({ gameId, invitedUserId: userId, status: 'accepted' })
+			const player = await trx('game_players')
+				.where({ gameId, userId })
 				.first();
 
-			if (!invitation) {
-				throw new Error('Player has not accepted the invitation or is not part of this game');
+			if (!player) {
+				throw new Error('Player is not part of this game');
 			}
 
 			// Check if team already has 2 players
-			const teamCount = await trx('game_invitations')
-				.where({ gameId, status: 'accepted', team })
+			const teamCount = await trx('game_players')
+				.where({ gameId, team })
 				.count('* as count')
 				.first();
 
 			const currentTeamSize = Number(teamCount?.count || 0);
 
 			// If trying to assign to a team that already has 2 players (and this player is not already on that team)
-			if (currentTeamSize >= 2 && invitation.team !== team) {
+			if (currentTeamSize >= 2 && player.team !== team) {
 				throw new Error(`The ${team} team is already full (2 players)`);
 			}
 
 			// Update the player's team
-			await trx('game_invitations')
-				.where({ id: invitation.id })
+			await trx('game_players')
+				.where({ id: player.id })
 				.update({ team });
 		});
 

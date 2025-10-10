@@ -548,6 +548,12 @@
         console.error("Error swapping teams:", error);
         alert("An error occurred while swapping teams");
       }
+    } else if (elementBelow?.closest(".team-white")) {
+      // Assign to white team
+      await assignTeam(draggedUserId, "white");
+    } else if (elementBelow?.closest(".team-black")) {
+      // Assign to black team
+      await assignTeam(draggedUserId, "black");
     }
 
     // Reset state
@@ -716,7 +722,9 @@
               <div class="team-players">
                 {#each gamePlayers.filter((player) => player.team === "white") as player}
                   <div
-                    class="player-slot filled team-white {isCreator ? 'draggable' : ''}"
+                    class="player-slot filled team-white {isCreator
+                      ? 'draggable'
+                      : ''}"
                     data-user-id={player.userId}
                   >
                     <div
@@ -747,25 +755,17 @@
                             <span class="creator-badge">Creator</span>
                           {/if}
                         </div>
-                        <div class="player-status">
-                          ⚪ Team White
-                        </div>
                       </div>
                     </div>
                     {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
                       <button
                         class="eject-btn"
                         on:click={() =>
-                          ejectPlayer(
-                            player.userId,
-                            player.user.name
-                          )}
+                          ejectPlayer(player.userId, player.user.name)}
                         disabled={ejectingPlayerId === player.userId}
                         title="Eject player"
                       >
-                        {ejectingPlayerId === player.userId
-                          ? "..."
-                          : "✕"}
+                        {ejectingPlayerId === player.userId ? "..." : "✕"}
                       </button>
                     {/if}
                   </div>
@@ -794,7 +794,9 @@
               <div class="team-players">
                 {#each gamePlayers.filter((player) => player.team === "black") as player}
                   <div
-                    class="player-slot filled team-black {isCreator ? 'draggable' : ''}"
+                    class="player-slot filled team-black {isCreator
+                      ? 'draggable'
+                      : ''}"
                     data-user-id={player.userId}
                   >
                     <div
@@ -825,25 +827,17 @@
                             <span class="creator-badge">Creator</span>
                           {/if}
                         </div>
-                        <div class="player-status">
-                          ⚫ Team Black
-                        </div>
                       </div>
                     </div>
                     {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
                       <button
                         class="eject-btn"
                         on:click={() =>
-                          ejectPlayer(
-                            player.userId,
-                            player.user.name
-                          )}
+                          ejectPlayer(player.userId, player.user.name)}
                         disabled={ejectingPlayerId === player.userId}
                         title="Eject player"
                       >
-                        {ejectingPlayerId === player.userId
-                          ? "..."
-                          : "✕"}
+                        {ejectingPlayerId === player.userId ? "..." : "✕"}
                       </button>
                     {/if}
                   </div>
@@ -864,10 +858,10 @@
 
           <!-- Unassigned Players Section -->
           {#if invitations.some((inv) => !inv.team && inv.status !== "declined")}
-            <div class="unassigned-section">
-              <h3 class="unassigned-title">⚠️ Unassigned Players</h3>
-              <div class="unassigned-players">
-                <!-- Unassigned invited players -->
+            <div class="invited-section">
+              <h3 class="invited-title">Invited Players</h3>
+              <div class="invited-players">
+                <!-- invited players -->
                 {#each invitations.filter((inv) => !inv.team && inv.status !== "declined") as invitation}
                   <div
                     class="player-slot {invitation.status === 'accepted'
@@ -1496,7 +1490,7 @@
     background-clip: text;
   }
 
-  .unassigned-section {
+  .invited-section {
     margin-top: 2rem;
     padding: 1.5rem;
     background: #fff3cd;
@@ -1504,7 +1498,7 @@
     border-radius: 12px;
   }
 
-  .unassigned-title {
+  .invited-title {
     font-size: 1.2rem;
     font-weight: 700;
     color: #856404;
@@ -1512,7 +1506,7 @@
     text-align: center;
   }
 
-  .unassigned-players {
+  .invited-players {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
