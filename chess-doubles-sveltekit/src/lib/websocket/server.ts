@@ -3,68 +3,97 @@ import type { IncomingMessage } from 'http';
 import type { Duplex } from 'stream';
 import type { WebSocketMessage } from './types';
 
-// Store connected clients mapped by user ID
-const clients = new Map<string, Set<WebSocket>>();
+// Use globalThis to ensure singleton across all module contexts
+const GLOBAL_WS_KEY = Symbol.for('chess-doubles.websocket.server');
 
-let wss: WebSocketServer | null = null;
+interface GlobalWebSocketState {
+	wss: WebSocketServer | null;
+	clients: Map<string, Set<WebSocket>>;
+	pingInterval: ReturnType<typeof setInterval> | null;
+}
+
+function getGlobalState(): GlobalWebSocketState {
+	if (!(globalThis as any)[GLOBAL_WS_KEY]) {
+		console.log('[WebSocket] Creating new global state');
+		(globalThis as any)[GLOBAL_WS_KEY] = {
+			wss: null,
+			clients: new Map<string, Set<WebSocket>>(),
+			pingInterval: null
+		};
+	}
+	return (globalThis as any)[GLOBAL_WS_KEY];
+}
 
 export function initializeWebSocketServer() {
-	if (wss) {
-		console.log("WebSocket server already initialized");
-		return wss;
+	const state = getGlobalState();
+
+	if (state.wss) {
+		console.log('[WebSocket] Server already initialized');
+		return state.wss;
 	}
 
-	wss = new WebSocketServer({ noServer: true });
+	console.log('[WebSocket] Initializing new WebSocket server');
+	state.wss = new WebSocketServer({ noServer: true });
 
-	wss.on('connection', (ws: WebSocket, request: IncomingMessage, userId: string) => {
-		console.log(`WebSocket client connected: ${userId}`);
+	state.wss.on('connection', (ws: WebSocket, request: IncomingMessage, userId: string) => {
+		console.log(`[WebSocket] Client connected: ${userId}`);
 
 		// Add client to the map
-		if (!clients.has(userId)) {
-			clients.set(userId, new Set());
+		if (!state.clients.has(userId)) {
+			state.clients.set(userId, new Set());
 		}
-		clients.get(userId)!.add(ws);
+		state.clients.get(userId)!.add(ws);
+		console.log(`[WebSocket] Total users connected: ${state.clients.size}`);
 
 		// Send connection confirmation
 		ws.send(JSON.stringify({ type: 'connected', payload: { userId } }));
 
 		ws.on('close', () => {
-			console.log(`WebSocket client disconnected: ${userId}`);
-			const userClients = clients.get(userId);
+			console.log(`[WebSocket] Client disconnected: ${userId}`);
+			const userClients = state.clients.get(userId);
 			if (userClients) {
 				userClients.delete(ws);
 				if (userClients.size === 0) {
-					clients.delete(userId);
+					state.clients.delete(userId);
 				}
 			}
+			console.log(`[WebSocket] Total users connected: ${state.clients.size}`);
 		});
 
 		ws.on('error', (error) => {
-			console.error('WebSocket error:', error);
+			console.error('[WebSocket] Error:', error);
 		});
 
 		// Handle ping/pong for connection health
 		ws.on('pong', () => {
 			// Client is alive
 		});
-
 	});
 
 	// Set up ping interval to keep connections alive
-	const pingInterval = setInterval(() => {
-		wss?.clients.forEach((ws) => {
-			if (ws.readyState === WebSocket.OPEN) {
-				ws.ping(String(Date.now()));
+	if (!state.pingInterval) {
+		state.pingInterval = setInterval(() => {
+			const clientCount = state.wss?.clients.size || 0;
+			if (clientCount > 0) {
+				console.log(`[WebSocket] Pinging ${clientCount} clients`);
 			}
-		});
-	}, 30000); // Ping every 30 seconds
+			state.wss?.clients.forEach((ws) => {
+				if (ws.readyState === WebSocket.OPEN) {
+					ws.ping();
+				}
+			});
+		}, 30000); // Ping every 30 seconds
+	}
 
-	wss.on('close', () => {
-		console.log("close websocket server");
-		clearInterval(pingInterval);
+	state.wss.on('close', () => {
+		console.log('[WebSocket] Server closing');
+		if (state.pingInterval) {
+			clearInterval(state.pingInterval);
+			state.pingInterval = null;
+		}
 	});
 
-	return wss;
+	return state.wss;
 }
 
 export function handleUpgrade(
@@ -81,9 +110,11 @@ export function handleUpgrade(
 }
 
 export function sendToUser(userId: string, message: WebSocketMessage) {
-	const userClients = clients.get(userId);
+	const state = getGlobalState();
+	const userClients = state.clients.get(userId);
+
 	if (!userClients || userClients.size === 0) {
-		console.log("Found no WebSocket connections for user", userId);
+		console.log(`[WebSocket] No connections for user ${userId}`);
 		return false;
 	}
 
@@ -97,6 +128,10 @@ export function sendToUser(userId: string, message: WebSocketMessage) {
 		}
 	});
 
+	if (sent) {
+		console.log(`[WebSocket] Sent message to user ${userId}: ${message.type}`);
+	}
+
 	return sent;
 }
 
@@ -106,10 +141,11 @@ export function sendToUsers(userIds: string[], message: WebSocketMessage) {
 }
 
 export function broadcastToAll(message: WebSocketMessage) {
+	const state = getGlobalState();
 	const messageStr = JSON.stringify(message);
 	let count = 0;
 
-	clients.forEach((userClients) => {
+	state.clients.forEach((userClients) => {
 		userClients.forEach((ws) => {
 			if (ws.readyState === WebSocket.OPEN) {
 				ws.send(messageStr);
@@ -118,14 +154,17 @@ export function broadcastToAll(message: WebSocketMessage) {
 		});
 	});
 
+	console.log(`[WebSocket] Broadcast message to ${count} clients`);
 	return count;
 }
 
 export function getConnectedUserIds(): string[] {
-	return Array.from(clients.keys());
+	const state = getGlobalState();
+	return Array.from(state.clients.keys());
 }
 
 export function isUserConnected(userId: string): boolean {
-	const userClients = clients.get(userId);
+	const state = getGlobalState();
+	const userClients = state.clients.get(userId);
 	return !!userClients && userClients.size > 0;
 }
