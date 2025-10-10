@@ -11,9 +11,10 @@ Chess Doubles is a web application built with SvelteKit featuring Google OAuth a
 ### Technology Stack
 
 - **Framework**: SvelteKit (latest) with TypeScript
-- **Authentication**: Auth.js (formerly NextAuth.js) with Google OAuth provider
+- **Authentication**: Auth.js (formerly NextAuth.js) with Google OAuth and Credentials providers
 - **Database**: PostgreSQL with Knex.js for query building and migrations
 - **Notifications**: Web Push API with VAPID authentication
+- **Email**: Nodemailer with MailDev for development
 - **Build Tool**: Vite
 - **Node Version**: 22.x (managed via fnm)
 - **Styling**: Scoped CSS within Svelte components
@@ -43,6 +44,9 @@ chess-doubles-sveltekit/
 │   │   │   ├── game-notifications.server.ts # Game-specific notifications
 │   │   │   ├── client.ts                   # Client-side notification utilities
 │   │   │   └── register-sw.ts              # Service worker registration
+│   │   ├── email/
+│   │   │   ├── mailer.server.ts            # Email sending service with nodemailer
+│   │   │   └── templates.ts                # Email templates (signup, invites, etc.)
 │   │   └── components/
 │   │       ├── NotificationPrompt.svelte   # Notification permission prompt (production only)
 │   │       └── NotificationToggle.svelte   # Manual notification toggle component
@@ -150,26 +154,140 @@ VAPID_PRIVATE_KEY=<private-key>
 VAPID_SUBJECT=mailto:your@email.com
 ```
 
+### Email System
+
+The app includes a comprehensive email system for user notifications and verifications:
+
+#### Architecture
+
+1. **Email Service** (`src/lib/email/mailer.server.ts`):
+   - Uses nodemailer for sending emails
+   - Automatically uses MailDev in development
+   - Production-ready with SMTP configuration
+   - Verifies connection on startup
+
+2. **Email Templates** (`src/lib/email/templates.ts`):
+   - Branded HTML templates with inline styles
+   - Plain text fallbacks for all emails
+   - Signup confirmation emails
+   - Game invitation emails
+   - Responsive design for all email clients
+
+3. **MailDev (Development)**:
+   - Local email server for testing
+   - Web UI at http://localhost:1080
+   - SMTP server at localhost:1025
+   - Captures all emails sent in development
+   - No external SMTP required for local development
+
+#### Email Types
+
+- **Signup Confirmation** - Welcome email with verification link (24hr expiry)
+- **Game Invitation** - Notify users when invited to a game
+- **Password Reset** - Secure token-based password reset (future)
+- **Friend Request** - Notify users of new friend requests (future)
+
+#### Implementation
+
+**Server-Side Sending**:
+```typescript
+import { sendEmail } from '$lib/email/mailer.server';
+import { signupConfirmationEmail } from '$lib/email/templates';
+
+const emailContent = signupConfirmationEmail({
+  name: user.name,
+  email: user.email,
+  verificationUrl: 'https://example.com/verify?token=...'
+});
+
+await sendEmail({
+  to: user.email,
+  subject: emailContent.subject,
+  html: emailContent.html,
+  text: emailContent.text
+});
+```
+
+**Email Verification Flow**:
+1. User signs up with email/password
+2. Verification token created in `verification_tokens` table (24hr expiry)
+3. Confirmation email sent with verification link
+4. User clicks link to verify email
+5. Token validated and marked as used
+6. User's `emailVerified` field updated
+
+**API Endpoints**:
+- `POST /api/auth/signup` - Create account and send verification email
+- `GET /auth/verify-email?token=...` - Verify email address
+
+#### Environment Variables
+
+**Development (MailDev - Auto-configured)**:
+- No SMTP configuration needed
+- Emails viewable at http://localhost:1080
+
+**Production**:
+- `SMTP_HOST` - SMTP server hostname (e.g., smtp.gmail.com)
+- `SMTP_PORT` - SMTP server port (usually 587 or 465)
+- `SMTP_SECURE` - Use TLS/SSL (true/false)
+- `SMTP_USER` - SMTP username
+- `SMTP_PASS` - SMTP password
+- `SMTP_FROM` - From address (e.g., "Chess Doubles <noreply@chessdoubles.com>")
+
+#### Docker Setup
+
+MailDev is configured in `docker-compose.yaml`:
+```yaml
+maildev:
+  image: maildev/maildev
+  ports:
+    - "1080:1080"  # Web UI
+    - "1025:1025"  # SMTP server
+```
+
+Start with: `docker-compose up -d`
+
+#### Testing Emails
+
+1. Start MailDev: `docker-compose up -d maildev`
+2. Sign up for an account in the app
+3. View email at http://localhost:1080
+4. Click verification link to test flow
+
 ### Authentication Flow
 
 1. **Logged-Out State** (Default):
 
-   - Landing page with welcome message and feature highlights
-   - "Sign in with Google" button using Auth.js SignIn component
-   - Responsive grid layout showcasing app benefits
+   - Landing page with welcome message
+   - "Get Started" button linking to `/auth` page
+   - Responsive design with chess-themed imagery
 
-2. **Logged-In State**:
+2. **Sign In/Sign Up Page** (`/auth`):
+   - Tabbed interface for Sign In and Sign Up
+   - **Email/Password Authentication**:
+     - Sign up with email, password (min 8 chars), and name
+     - Sign in with email and password
+     - Automatic email verification on signup
+   - **Google OAuth**:
+     - "Continue with Google" button
+     - One-click authentication flow
+   - Unified experience for both auth methods
+
+3. **Logged-In State**:
    - Personalized welcome message with user's name
-   - User avatar displayed from Google profile
+   - User avatar displayed from Google profile or default
    - User profile card showing name and email
-   - Dashboard with interactive content cards (Analytics, Settings, Content)
+   - Dashboard with games list
    - "Sign Out" button using Auth.js SignOut component
 
 ### Session Management
 
 - Auth.js handles all authentication logic server-side
+- **JWT-based sessions** for Credentials provider (email/password)
+- **Database sessions** for OAuth providers (Google)
 - Sessions are securely managed with encrypted cookies
 - User data is loaded in `+page.server.ts` and passed to client via `PageData`
+- Passwords hashed and salted with bcrypt (10 rounds, salt auto-generated)
 - No sensitive credentials stored on client side
 
 ### Database Architecture
@@ -181,14 +299,15 @@ VAPID_SUBJECT=mailto:your@email.com
 
 #### Database Tables
 
-1. **users** - User profile information (id, name, email, emailVerified, image)
+1. **users** - User profile information (id, name, email, emailVerified, image, password)
 2. **accounts** - OAuth provider account data (linked to users)
 3. **sessions** - Active user sessions with expiration
-4. **verification_token** - Email verification tokens (composite primary key)
-5. **push_subscriptions** - Web push notification subscriptions per user
-6. **game_invitations** - Game invitation tracking (pending, accepted, declined)
-7. **games** - Chess game state and metadata
-8. **friends** - Friend relationships between users
+4. **verification_token** - Auth.js email verification tokens (composite primary key)
+5. **verification_tokens** - Custom verification tokens (email verification, password reset, etc.)
+6. **push_subscriptions** - Web push notification subscriptions per user
+7. **game_invitations** - Game invitation tracking (pending, accepted, declined)
+8. **games** - Chess game state and metadata
+9. **friends** - Friend relationships between users
 
 ## Essential Commands
 
@@ -251,22 +370,31 @@ npx knex seed:run
 **Authentication**
 
 - `AUTH_SECRET`: Secret key for signing/encrypting sessions (auto-generated via `npx auth secret`)
-- `GOOGLE_CLIENT_ID`: OAuth client ID from Google Cloud Console
-- `GOOGLE_CLIENT_SECRET`: OAuth client secret from Google Cloud Console
+- `AUTH_GOOGLE_ID`: OAuth client ID from Google Cloud Console
+- `AUTH_GOOGLE_SECRET`: OAuth client secret from Google Cloud Console
 
 **Database**
 
-- `DB_NAME`: PostgreSQL database name
-- `DB_USER`: PostgreSQL username
-- `DB_PASSWORD`: PostgreSQL password
-- `DB_HOST`: PostgreSQL host (default: localhost)
-- `DB_PORT`: PostgreSQL port (default: 5432)
+- `DATABASE_NAME`: PostgreSQL database name
+- `DATABASE_USER`: PostgreSQL username
+- `DATABASE_PASSWORD`: PostgreSQL password
+- `DATABASE_HOST`: PostgreSQL host (default: localhost)
+- `DATABASE_PORT`: PostgreSQL port (default: 5435)
 
 **Push Notifications**
 
 - `VAPID_PUBLIC_KEY`: Public key for VAPID authentication (generate with `npx web-push generate-vapid-keys`)
 - `VAPID_PRIVATE_KEY`: Private key for VAPID authentication
 - `VAPID_SUBJECT`: Contact email for push service (e.g., `mailto:admin@example.com`)
+
+**Email (Production Only - Development auto-configured)**
+
+- `SMTP_HOST`: SMTP server hostname (e.g., smtp.gmail.com)
+- `SMTP_PORT`: SMTP server port (usually 587 or 465)
+- `SMTP_SECURE`: Use TLS/SSL connection (true/false)
+- `SMTP_USER`: SMTP authentication username
+- `SMTP_PASS`: SMTP authentication password
+- `SMTP_FROM`: From email address (e.g., "Chess Doubles <noreply@chessdoubles.com>")
 
 ### Google OAuth Setup
 
@@ -371,12 +499,15 @@ npx knex seed:run
 
 1. Ensure Node 22.x is active: `fnm use 22`
 2. Install dependencies if not already done: `npm install`
-3. Ensure PostgreSQL is running locally
-4. Create database: `createdb chess_doubles` (or your chosen DB_NAME)
-5. Ensure `.env` file has all required variables (auth + database)
-6. Run database migrations: `npx knex migrate:latest`
-7. Run dev server: `npm run dev`
-8. App available at `http://localhost:5173`
+3. Start Docker services: `docker-compose up -d`
+   - PostgreSQL on port 5435
+   - MailDev web UI at http://localhost:1080
+   - MailDev SMTP at localhost:1025
+4. Ensure `.env` file has all required variables (auth + database)
+5. Run database migrations: `npx knex migrate:latest`
+6. Run dev server: `npm run dev`
+7. App available at `http://localhost:5173`
+8. View emails at `http://localhost:1080`
 
 ### Making Changes
 
