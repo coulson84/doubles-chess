@@ -39,9 +39,10 @@ export const load: PageServerLoad = async (event) => {
 			throw error(404, 'Game not found');
 		}
 
-		// Load pending invitations with user details
+		// Load pending and accepted invitations with user details
 		const invitations = await knex('game_invitations')
-			.where({ gameId, status: 'pending' })
+			.where({ gameId })
+			.whereIn('status', ['pending', 'accepted'])
 			.join('users', 'game_invitations.invitedUserId', 'users.id')
 			.select(
 				'game_invitations.id',
@@ -74,10 +75,22 @@ export const load: PageServerLoad = async (event) => {
 			}
 		}));
 
+		// Check if current user has been invited to this game
+		let myInvitation = null;
+		if (session?.user?.id) {
+			myInvitation = await knex('game_invitations')
+				.where({
+					gameId,
+					invitedUserId: session.user.id
+				})
+				.first();
+		}
+
 		return {
 			session,
 			game: game as Game,
-			invitations: formattedInvitations
+			invitations: formattedInvitations,
+			myInvitation
 		};
 	} catch (err) {
 		if (err && typeof err === 'object' && 'status' in err) {

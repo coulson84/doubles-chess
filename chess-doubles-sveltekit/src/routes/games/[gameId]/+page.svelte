@@ -8,6 +8,7 @@
   $: user = session?.user;
   $: game = data.game;
   $: invitations = data.invitations || [];
+  $: myInvitation = data.myInvitation;
   $: totalPlayers = 1 + invitations.length; // Creator + invited players
   $: canInviteMore = totalPlayers < 4;
 
@@ -155,6 +156,37 @@
       inviteError = 'An error occurred while sending the invitation';
     }
   }
+
+  let isResponding = false;
+  let respondError = '';
+
+  async function respondToInvitation(status: 'accepted' | 'declined') {
+    if (!myInvitation) return;
+
+    isResponding = true;
+    respondError = '';
+
+    try {
+      const response = await fetch(`/api/invitations/${myInvitation.id}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (response.ok) {
+        // Reload the page to reflect the updated status
+        goto(window.location.pathname, { invalidateAll: true });
+      } else {
+        const error = await response.json();
+        respondError = error.error || 'Failed to respond to invitation';
+        isResponding = false;
+      }
+    } catch (error) {
+      console.error('Error responding to invitation:', error);
+      respondError = 'An error occurred while responding';
+      isResponding = false;
+    }
+  }
 </script>
 
 <div class="container">
@@ -282,7 +314,7 @@
 
             <!-- Invited player slots -->
             {#each invitations as invitation}
-              <div class="player-slot pending">
+              <div class="player-slot {invitation.status === 'accepted' ? 'filled' : 'pending'}">
                 {#if invitation.invitedUser.image}
                   <img src={invitation.invitedUser.image} alt={invitation.invitedUser.name} class="player-avatar" />
                 {:else}
@@ -290,7 +322,9 @@
                 {/if}
                 <div class="player-info">
                   <div class="player-name">{invitation.invitedUser.name}</div>
-                  <div class="player-status">Invited (Pending)</div>
+                  <div class="player-status">
+                    {invitation.status === 'accepted' ? 'Accepted' : 'Invited (Pending)'}
+                  </div>
                 </div>
               </div>
             {/each}
@@ -315,6 +349,32 @@
             <p class="help-text">
               Share the game ID with your friends to invite them to join!
             </p>
+          {:else if myInvitation?.status === 'pending'}
+            <div class="invitation-actions">
+              <button
+                class="btn-accept"
+                on:click={() => respondToInvitation('accepted')}
+                disabled={isResponding}
+              >
+                {isResponding ? 'Responding...' : 'Accept Invitation'}
+              </button>
+              <button
+                class="btn-decline"
+                on:click={() => respondToInvitation('declined')}
+                disabled={isResponding}
+              >
+                Decline
+              </button>
+            </div>
+            {#if respondError}
+              <p class="error-text">{respondError}</p>
+            {/if}
+          {:else if myInvitation?.status === 'accepted'}
+            <button class="btn-primary" disabled>
+              Waiting for other players...
+            </button>
+          {:else if myInvitation?.status === 'declined'}
+            <p class="info-text">You have declined this invitation</p>
           {:else}
             <button class="btn-primary">
               Ready to Play
@@ -707,6 +767,61 @@
     margin-top: 1rem;
     color: #666;
     font-size: 0.95rem;
+  }
+
+  .invitation-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .btn-accept,
+  .btn-decline {
+    padding: 1rem 2rem;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+  }
+
+  .btn-accept {
+    background: #28a745;
+    color: white;
+  }
+
+  .btn-accept:hover:not(:disabled) {
+    background: #218838;
+  }
+
+  .btn-decline {
+    background: #dc3545;
+    color: white;
+  }
+
+  .btn-decline:hover:not(:disabled) {
+    background: #c82333;
+  }
+
+  .btn-accept:disabled,
+  .btn-decline:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .error-text {
+    color: #dc3545;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .info-text {
+    color: #666;
+    font-size: 1rem;
+    margin: 0;
   }
 
   .btn-primary,
