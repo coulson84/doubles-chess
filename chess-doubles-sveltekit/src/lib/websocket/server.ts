@@ -9,7 +9,6 @@ const clients = new Map<string, Set<WebSocket>>();
 let wss: WebSocketServer | null = null;
 
 export function initializeWebSocketServer() {
-	console.log(new Error().stack);
 	if (wss) {
 		console.log("WebSocket server already initialized");
 		return wss;
@@ -48,16 +47,12 @@ export function initializeWebSocketServer() {
 		ws.on('pong', () => {
 			// Client is alive
 		});
+
 	});
 
-	console.log("Set interval")
 	// Set up ping interval to keep connections alive
 	const pingInterval = setInterval(() => {
-		console.log("a");
-		console.log(wss?.clients.size, 'connected WebSocket clients');
-		console.log(WebSocket);
 		wss?.clients.forEach((ws) => {
-			console.log(ws.readyState);
 			if (ws.readyState === WebSocket.OPEN) {
 				ws.ping(String(Date.now()));
 			}
