@@ -1,8 +1,11 @@
 <script lang="ts">
   import { SignOut } from "@auth/sveltekit/components";
   import type { PageData } from "./$types";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import NotificationPrompt from "$lib/components/NotificationPrompt.svelte";
+  import { wsClient } from "$lib/websocket/client";
+  import { onMount, onDestroy } from "svelte";
+  import type { GameInviteReceivedPayload } from "$lib/websocket/types";
 
   export let data: PageData;
 
@@ -12,6 +15,30 @@
 
   console.log(user, games);
   let isCreatingGame = false;
+
+  // WebSocket connection
+  onMount(() => {
+    if (user?.id) {
+      wsClient.connect(user.id);
+
+      // Handle game invitation received
+      const unsubInvite = wsClient.on('game_invite_received', async (payload) => {
+        const data = payload as GameInviteReceivedPayload;
+        console.log('Received game invitation:', data);
+
+        // Refresh the page data to show new invitation
+        await invalidateAll();
+      });
+
+      return () => {
+        unsubInvite();
+      };
+    }
+  });
+
+  onDestroy(() => {
+    wsClient.disconnect();
+  });
 
   async function createGame() {
     isCreatingGame = true;

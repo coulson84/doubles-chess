@@ -57,6 +57,7 @@ export async function sendPushNotificationToMultiple(
 	subscriptions: PushSubscription[],
 	notification: ChessNotification
 ): Promise<{ successful: number; failed: number; expiredSubscriptionIds: string[] }> {
+	console.log(`Sending push ${JSON.stringify(notification)} to ${subscriptions.length} subscriptions`);
 	const results = await Promise.allSettled(
 		subscriptions.map(sub => sendPushNotification(sub, notification))
 	);

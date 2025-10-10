@@ -2,6 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import db from '$lib/../db.server';
 import { notifyGameInvite } from '$lib/notifications/game-notifications.server';
+import { sendToUser } from '$lib/websocket/server';
+import type { GameInviteReceivedPayload } from '$lib/websocket/types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const session = await locals.auth();
@@ -67,6 +69,17 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		// Send push notification (outside transaction to avoid blocking)
 		await notifyGameInvite(gameId, userId, session.user.name || 'Someone');
+
+		// Send WebSocket notification in real-time
+		const wsPayload: GameInviteReceivedPayload = {
+			gameId,
+			invitedBy: {
+				id: session.user.id,
+				name: session.user.name || 'Someone',
+				image: session.user.image || null
+			}
+		};
+		sendToUser(userId, { type: 'game_invite_received', payload: wsPayload });
 
 		return json({ invitation: result });
 	} catch (error) {

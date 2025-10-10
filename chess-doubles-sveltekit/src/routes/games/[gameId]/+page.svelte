@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
+  import { wsClient } from "$lib/websocket/client";
+  import { onMount, onDestroy } from "svelte";
+  import type { GameInviteResponsePayload } from "$lib/websocket/types";
 
   export let data: PageData;
 
@@ -11,17 +14,61 @@
   $: myInvitation = data.myInvitation;
   $: totalPlayers = 1 + invitations.length; // Creator + invited players
   $: canInviteMore = totalPlayers < 4;
+  $: isCreator = user?.id === game?.createdBy;
+  // Determine if we should show lobby or game board
+  $: isLobby =
+    game.status === "awaitingPlayers" || game.status === "readyToStart";
+
+  // WebSocket connection
+  onMount(() => {
+    if (user?.id) {
+      wsClient.connect(user.id);
+
+      // Handle invitation accepted
+      const unsubAccepted = wsClient.on(
+        "game_invite_accepted",
+        async (payload) => {
+          const data = payload as GameInviteResponsePayload;
+          if (data.gameId === game.id) {
+            console.log(`${data.userName} accepted the invitation!`);
+            await invalidateAll();
+          }
+        }
+      );
+
+      // Handle invitation declined
+      const unsubDeclined = wsClient.on(
+        "game_invite_declined",
+        async (payload) => {
+          const data = payload as GameInviteResponsePayload;
+          if (data.gameId === game.id) {
+            console.log(`${data.userName} declined the invitation`);
+            await invalidateAll();
+          }
+        }
+      );
+
+      return () => {
+        unsubAccepted();
+        unsubDeclined();
+      };
+    }
+  });
+
+  onDestroy(() => {
+    wsClient.disconnect();
+  });
 
   function getStatusDisplay(status: string): string {
     switch (status) {
-      case 'awaitingPlayers':
-        return 'Awaiting Players';
-      case 'readyToStart':
-        return 'Ready to Start';
-      case 'inProgress':
-        return 'In Progress';
-      case 'complete':
-        return 'Complete';
+      case "awaitingPlayers":
+        return "Awaiting Players";
+      case "readyToStart":
+        return "Ready to Start";
+      case "inProgress":
+        return "In Progress";
+      case "complete":
+        return "Complete";
       default:
         return status;
     }
@@ -29,16 +76,16 @@
 
   function getStatusColor(status: string): string {
     switch (status) {
-      case 'awaitingPlayers':
-        return '#ffc107';
-      case 'readyToStart':
-        return '#17a2b8';
-      case 'inProgress':
-        return '#007bff';
-      case 'complete':
-        return '#28a745';
+      case "awaitingPlayers":
+        return "#ffc107";
+      case "readyToStart":
+        return "#17a2b8";
+      case "inProgress":
+        return "#007bff";
+      case "complete":
+        return "#28a745";
       default:
-        return '#6c757d';
+        return "#6c757d";
     }
   }
 
@@ -47,12 +94,8 @@
   }
 
   function goHome() {
-    goto('/');
+    goto("/");
   }
-
-  // Determine if we should show lobby or game board
-  $: isLobby = game.status === 'awaitingPlayers' || game.status === 'readyToStart';
-  $: isCreator = user?.id === game.createdBy;
 
   // Invite players functionality
   type SearchUser = {
@@ -63,7 +106,7 @@
     is_friend: boolean;
   };
 
-  let searchQuery = '';
+  let searchQuery = "";
   let searchResults: SearchUser[] = [];
   let isSearching = false;
   let showDropdown = false;
@@ -72,13 +115,15 @@
   async function searchUsers(query: string) {
     isSearching = true;
     try {
-      const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(
+        `/api/users/search?q=${encodeURIComponent(query)}`
+      );
       if (response.ok) {
         const data = await response.json();
         searchResults = data.users || [];
       }
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error("Error searching users:", error);
     } finally {
       isSearching = false;
     }
@@ -103,7 +148,7 @@
     showDropdown = true;
     // Load friends if search is empty
     if (!searchQuery) {
-      searchUsers('');
+      searchUsers("");
     }
   }
 
@@ -114,30 +159,31 @@
     }, 200);
   }
 
-  let inviteError = '';
-  let inviteSuccess = '';
+  let inviteError = "";
+  let inviteSuccess = "";
 
   async function inviteUser(userId: string) {
-    inviteError = '';
-    inviteSuccess = '';
+    inviteError = "";
+    inviteSuccess = "";
 
     // Check if we can invite more players
     if (!canInviteMore) {
-      inviteError = 'Maximum 4 players (1 creator + 3 invited)';
+      inviteError = "Maximum 4 players (1 creator + 3 invited)";
       return;
     }
 
     try {
       const response = await fetch(`/api/games/${game.id}/invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
       });
 
       if (response.ok) {
-        const userName = searchResults.find(u => u.id === userId)?.name || 'User';
+        const userName =
+          searchResults.find((u) => u.id === userId)?.name || "User";
         inviteSuccess = `Invited ${userName} to the game!`;
-        searchQuery = '';
+        searchQuery = "";
         showDropdown = false;
 
         // Reload the page to show the new invitation
@@ -145,46 +191,69 @@
 
         // Clear success message after 3 seconds
         setTimeout(() => {
-          inviteSuccess = '';
+          inviteSuccess = "";
         }, 3000);
       } else {
         const error = await response.json();
-        inviteError = error.error || 'Failed to send invitation';
+        inviteError = error.error || "Failed to send invitation";
       }
     } catch (error) {
-      console.error('Error inviting user:', error);
-      inviteError = 'An error occurred while sending the invitation';
+      console.error("Error inviting user:", error);
+      inviteError = "An error occurred while sending the invitation";
     }
   }
 
   let isResponding = false;
-  let respondError = '';
+  let respondError = "";
 
-  async function respondToInvitation(status: 'accepted' | 'declined') {
+  async function respondToInvitation(status: "accepted" | "declined") {
     if (!myInvitation) return;
 
     isResponding = true;
-    respondError = '';
+    respondError = "";
 
     try {
-      const response = await fetch(`/api/invitations/${myInvitation.id}/respond`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
+      const response = await fetch(
+        `/api/invitations/${myInvitation.id}/respond`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
 
       if (response.ok) {
         // Reload the page to reflect the updated status
         goto(window.location.pathname, { invalidateAll: true });
       } else {
         const error = await response.json();
-        respondError = error.error || 'Failed to respond to invitation';
+        respondError = error.error || "Failed to respond to invitation";
         isResponding = false;
       }
     } catch (error) {
-      console.error('Error responding to invitation:', error);
-      respondError = 'An error occurred while responding';
+      console.error("Error responding to invitation:", error);
+      respondError = "An error occurred while responding";
       isResponding = false;
+    }
+  }
+
+  async function startGame() {
+    try {
+      const response = await fetch(`/api/games/${game.id}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        // Reload to show the game in progress
+        goto(window.location.pathname, { invalidateAll: true });
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to start game");
+      }
+    } catch (error) {
+      console.error("Error starting game:", error);
+      alert("An error occurred while starting the game");
     }
   }
 </script>
@@ -234,7 +303,7 @@
             </div>
             <div class="info-item">
               <span class="label">Your Role:</span>
-              <span class="value">{isCreator ? 'Game Creator' : 'Player'}</span>
+              <span class="value">{isCreator ? "Game Creator" : "Player"}</span>
             </div>
           </div>
         </div>
@@ -251,7 +320,9 @@
               {/if}
               <input
                 type="text"
-                placeholder={canInviteMore ? "Invite players" : "Maximum players reached (4/4)"}
+                placeholder={canInviteMore
+                  ? "Invite players"
+                  : "Maximum players reached (4/4)"}
                 class="invite-input"
                 bind:value={searchQuery}
                 on:input={handleSearchInput}
@@ -282,7 +353,7 @@
                             <img src={user.image} alt={user.name} />
                           {:else}
                             <div class="avatar-placeholder">
-                              {user.name?.charAt(0) || '?'}
+                              {user.name?.charAt(0) || "?"}
                             </div>
                           {/if}
                         </div>
@@ -307,23 +378,39 @@
             <div class="player-slot filled">
               <div class="player-icon">👤</div>
               <div class="player-info">
-                <div class="player-name">{isCreator ? 'You' : 'Player 1'}</div>
+                <div class="player-name">{isCreator ? "You" : "Player 1"}</div>
                 <div class="player-status">Creator</div>
               </div>
             </div>
 
             <!-- Invited player slots -->
             {#each invitations as invitation}
-              <div class="player-slot {invitation.status === 'accepted' ? 'filled' : 'pending'}">
+              <div
+                class="player-slot {invitation.status === 'accepted'
+                  ? 'filled'
+                  : 'pending'}"
+              >
                 {#if invitation.invitedUser.image}
-                  <img src={invitation.invitedUser.image} alt={invitation.invitedUser.name} class="player-avatar" />
+                  <img
+                    src={invitation.invitedUser.image}
+                    alt={invitation.invitedUser.name}
+                    class="player-avatar"
+                  />
                 {:else}
-                  <div class="player-icon">{invitation.invitedUser.name?.charAt(0) || '?'}</div>
+                  <div class="player-icon">
+                    {invitation.invitedUser.name?.charAt(0) || "?"}
+                  </div>
                 {/if}
                 <div class="player-info">
-                  <div class="player-name">{invitation.invitedUser.name}</div>
+                  <div class="player-name">
+                    {invitation.invitedUserId === user?.id
+                      ? "You"
+                      : invitation.invitedUser.name}
+                  </div>
                   <div class="player-status">
-                    {invitation.status === 'accepted' ? 'Accepted' : 'Invited (Pending)'}
+                    {invitation.status === "accepted"
+                      ? "Accepted"
+                      : "Invited (Pending)"}
                   </div>
                 </div>
               </div>
@@ -343,24 +430,31 @@
 
         <div class="lobby-actions">
           {#if isCreator}
-            <button class="btn-primary" disabled>
-              Waiting for Players ({totalPlayers}/4)
-            </button>
-            <p class="help-text">
-              Share the game ID with your friends to invite them to join!
-            </p>
-          {:else if myInvitation?.status === 'pending'}
+            {#if game.status === "readyToStart"}
+              <button class="btn-primary" on:click={startGame}>
+                Start Game
+              </button>
+              <p class="help-text">All players are ready! Click to begin.</p>
+            {:else}
+              <button class="btn-primary" disabled>
+                Waiting for Players ({totalPlayers}/4)
+              </button>
+              <p class="help-text">
+                Share the game ID with your friends to invite them to join!
+              </p>
+            {/if}
+          {:else if myInvitation?.status === "pending"}
             <div class="invitation-actions">
               <button
                 class="btn-accept"
-                on:click={() => respondToInvitation('accepted')}
+                on:click={() => respondToInvitation("accepted")}
                 disabled={isResponding}
               >
-                {isResponding ? 'Responding...' : 'Accept Invitation'}
+                {isResponding ? "Responding..." : "Accept Invitation"}
               </button>
               <button
                 class="btn-decline"
-                on:click={() => respondToInvitation('declined')}
+                on:click={() => respondToInvitation("declined")}
                 disabled={isResponding}
               >
                 Decline
@@ -369,28 +463,32 @@
             {#if respondError}
               <p class="error-text">{respondError}</p>
             {/if}
-          {:else if myInvitation?.status === 'accepted'}
-            <button class="btn-primary" disabled>
-              Waiting for other players...
-            </button>
-          {:else if myInvitation?.status === 'declined'}
+          {:else if myInvitation?.status === "accepted"}
+            {#if game.status === "readyToStart"}
+              <button class="btn-primary" disabled>
+                Waiting for creator to start game...
+              </button>
+            {:else}
+              <button class="btn-primary" disabled>
+                Waiting for other players...
+              </button>
+            {/if}
+          {:else if myInvitation?.status === "declined"}
             <p class="info-text">You have declined this invitation</p>
           {:else}
-            <button class="btn-primary">
-              Ready to Play
-            </button>
+            <button class="btn-primary"> Ready to Play </button>
           {/if}
         </div>
       </div>
     </div>
-  {:else if game.status === 'inProgress'}
+  {:else if game.status === "inProgress"}
     <!-- Game Board View (placeholder) -->
     <div class="game-view">
       <h1>Chess Doubles - Game In Progress</h1>
       <p>Game board coming soon...</p>
       <button class="btn-secondary" on:click={goHome}>← Back to Home</button>
     </div>
-  {:else if game.status === 'complete'}
+  {:else if game.status === "complete"}
     <!-- Completed Game View (placeholder) -->
     <div class="game-view">
       <h1>Game Complete</h1>
