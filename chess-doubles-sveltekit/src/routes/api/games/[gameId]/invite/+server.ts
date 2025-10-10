@@ -38,16 +38,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 				throw new Error('User already invited');
 			}
 
-			// Lock the game_invitations rows for this game and count pending/accepted invites
+				// Lock the game_invitations rows for this game and count pending/accepted invites
 			// Use FOR UPDATE to lock rows and prevent concurrent insertions
-			const pendingInvitesCount = await trx('game_invitations')
+			const pendingInvites = await trx('game_invitations')
 				.where({ gameId })
 				.whereIn('status', ['pending', 'accepted'])
-				.count('* as count')
-				.forUpdate()
-				.first();
+				.select('id')
+				.forUpdate();
 
-			const inviteCount = Number(pendingInvitesCount?.count || 0);
+			const inviteCount = pendingInvites.length;
 
 			if (inviteCount >= 3) {
 				throw new Error('Maximum 3 pending/accepted invitations allowed (1 creator + 3 invited players)');
