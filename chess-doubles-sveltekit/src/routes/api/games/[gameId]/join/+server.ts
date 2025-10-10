@@ -76,6 +76,15 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 							respondedAt: trx.fn.now(),
 							team: assignedTeam
 						});
+
+					// Add player to game_players table
+					await trx('game_players').insert({
+						gameId,
+						userId: session.user.id,
+						team: assignedTeam,
+						isCreator: false
+					});
+
 					return;
 				}
 			}
@@ -116,6 +125,14 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 				status: 'accepted',
 				respondedAt: trx.fn.now(),
 				team: assignedTeam
+			});
+
+			// Add player to game_players table
+			await trx('game_players').insert({
+				gameId,
+				userId: session.user.id,
+				team: assignedTeam,
+				isCreator: false
 			});
 
 			// If this is the 3rd player, update game status to readyToStart

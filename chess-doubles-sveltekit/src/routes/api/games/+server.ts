@@ -49,17 +49,32 @@ export const POST: RequestHandler = async ({ locals, request }) => {
       return json({ error: 'Time limit per move must be a positive number' }, { status: 400 });
     }
 
-    // Create a new game
-    const [game] = await knex('games')
-      .insert({
-        createdBy: session.user.id,
-        status: 'awaitingPlayers',
-        isPrivate,
-        timeLimitPerMove,
-        isRated,
-        teamAssignment
-      })
-      .returning('*');
+    // Create a new game and add creator as a player
+    const [game] = await knex.transaction(async (trx) => {
+      const [newGame] = await trx('games')
+        .insert({
+          createdBy: session.user.id,
+          status: 'awaitingPlayers',
+          isPrivate,
+          timeLimitPerMove,
+          isRated,
+          teamAssignment
+        })
+        .returning('*');
+
+      // Randomly assign creator to a team
+      const creatorTeam = Math.random() < 0.5 ? 'white' : 'black';
+
+      // Add creator to game_players
+      await trx('game_players').insert({
+        gameId: newGame.id,
+        userId: session.user.id,
+        team: creatorTeam,
+        isCreator: true
+      });
+
+      return [newGame];
+    });
 
     return json({ game }, { status: 201 });
   } catch (error) {

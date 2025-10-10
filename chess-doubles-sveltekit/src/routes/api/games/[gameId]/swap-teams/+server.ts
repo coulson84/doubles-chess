@@ -33,29 +33,38 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 		}
 
 		await knex.transaction(async (trx) => {
-			// Get both invitations
-			const draggedInvite = await trx('game_invitations')
-				.where({ gameId, invitedUserId: draggedUserId, status: 'accepted' })
+			// Get both players from game_players
+			const draggedPlayer = await trx('game_players')
+				.where({ gameId, userId: draggedUserId })
 				.first();
 
-			const targetInvite = await trx('game_invitations')
-				.where({ gameId, invitedUserId: targetUserId, status: 'accepted' })
+			const targetPlayer = await trx('game_players')
+				.where({ gameId, userId: targetUserId })
 				.first();
 
-			if (!draggedInvite || !targetInvite) {
+			if (!draggedPlayer || !targetPlayer) {
 				throw new Error('One or both players not found in game');
 			}
 
 			// Swap teams
-			const draggedTeam = draggedInvite.team;
-			const targetTeam = targetInvite.team;
+			const draggedTeam = draggedPlayer.team;
+			const targetTeam = targetPlayer.team;
 
+			await trx('game_players')
+				.where({ id: draggedPlayer.id })
+				.update({ team: targetTeam });
+
+			await trx('game_players')
+				.where({ id: targetPlayer.id })
+				.update({ team: draggedTeam });
+
+			// Also update the invitations table for non-creator players
 			await trx('game_invitations')
-				.where({ id: draggedInvite.id })
+				.where({ gameId, invitedUserId: draggedUserId, status: 'accepted' })
 				.update({ team: targetTeam });
 
 			await trx('game_invitations')
-				.where({ id: targetInvite.id })
+				.where({ gameId, invitedUserId: targetUserId, status: 'accepted' })
 				.update({ team: draggedTeam });
 		});
 

@@ -92,6 +92,14 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 						respondedAt: db.fn.now(),
 						team: assignedTeam
 					});
+
+				// Add player to game_players table
+				await trx('game_players').insert({
+					gameId: invitation.gameId,
+					userId: session.user.id,
+					team: assignedTeam,
+					isCreator: false
+				});
 			} else {
 				// Just update status for declined
 				await trx('game_invitations')

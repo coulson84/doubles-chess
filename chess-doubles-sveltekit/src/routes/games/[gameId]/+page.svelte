@@ -12,7 +12,8 @@
   $: game = data.game;
   $: invitations = data.invitations || [];
   $: myInvitation = data.myInvitation;
-  $: totalPlayers = 1 + invitations.length; // Creator + invited players
+  $: gamePlayers = data.gamePlayers || [];
+  $: totalPlayers = gamePlayers.length;
   $: isCreator = user?.id === game?.createdBy;
   // Determine if we should show lobby or game board
   $: isLobby =
@@ -713,62 +714,56 @@
             <div class="team-section white-team">
               <h3 class="team-title">⚪ White Team</h3>
               <div class="team-players">
-                {#each invitations.filter((inv) => inv.team === "white") as invitation}
+                {#each gamePlayers.filter((player) => player.team === "white") as player}
                   <div
-                    class="player-slot {invitation.status === 'accepted'
-                      ? 'filled'
-                      : 'pending'} team-white {isCreator &&
-                    invitation.status === 'accepted'
-                      ? 'draggable'
-                      : ''}"
-                    data-user-id={invitation.invitedUserId}
+                    class="player-slot filled team-white {isCreator ? 'draggable' : ''}"
+                    data-user-id={player.userId}
                   >
                     <div
                       class="player-main"
                       on:pointerdown={(e) =>
-                        isCreator &&
-                        invitation.status === "accepted" &&
-                        handlePointerDown(e, invitation.invitedUserId)}
+                        isCreator && handlePointerDown(e, player.userId)}
                       on:pointermove={handlePointerMove}
                       on:pointerup={handlePointerUp}
                       on:pointercancel={handlePointerUp}
                     >
-                      {#if invitation.invitedUser.image}
+                      {#if player.user.image}
                         <img
-                          src={invitation.invitedUser.image}
-                          alt={invitation.invitedUser.name}
+                          src={player.user.image}
+                          alt={player.user.name}
                           class="player-avatar"
                         />
                       {:else}
                         <div class="player-icon">
-                          {invitation.invitedUser.name?.charAt(0) || "?"}
+                          {player.user.name?.charAt(0) || "?"}
                         </div>
                       {/if}
                       <div class="player-info">
                         <div class="player-name">
-                          {invitation.invitedUserId === user?.id
+                          {player.userId === user?.id
                             ? "You"
-                            : invitation.invitedUser.name}
+                            : player.user.name}
+                          {#if player.isCreator}
+                            <span class="creator-badge">Creator</span>
+                          {/if}
                         </div>
                         <div class="player-status">
-                          {#if invitation.status === "pending"}
-                            Invited (Pending)
-                          {/if}
+                          ⚪ Team White
                         </div>
                       </div>
                     </div>
-                    {#if isCreator && game.status !== "inProgress" && game.status !== "complete"}
+                    {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
                       <button
                         class="eject-btn"
                         on:click={() =>
                           ejectPlayer(
-                            invitation.invitedUserId,
-                            invitation.invitedUser.name
+                            player.userId,
+                            player.user.name
                           )}
-                        disabled={ejectingPlayerId === invitation.invitedUserId}
+                        disabled={ejectingPlayerId === player.userId}
                         title="Eject player"
                       >
-                        {ejectingPlayerId === invitation.invitedUserId
+                        {ejectingPlayerId === player.userId
                           ? "..."
                           : "✕"}
                       </button>
@@ -777,7 +772,7 @@
                 {/each}
 
                 <!-- Empty white slots -->
-                {#each Array(Math.max(0, 2 - invitations.filter((inv) => inv.team === "white").length)) as _, i}
+                {#each Array(Math.max(0, 2 - gamePlayers.filter((p) => p.team === "white").length)) as _, i}
                   <div class="player-slot empty team-white">
                     <div class="player-icon">⭕</div>
                     <div class="player-info">
@@ -797,62 +792,56 @@
             <div class="team-section black-team">
               <h3 class="team-title">⚫ Black Team</h3>
               <div class="team-players">
-                {#each invitations.filter((inv) => inv.team === "black") as invitation}
+                {#each gamePlayers.filter((player) => player.team === "black") as player}
                   <div
-                    class="player-slot {invitation.status === 'accepted'
-                      ? 'filled'
-                      : 'pending'} team-black {isCreator &&
-                    invitation.status === 'accepted'
-                      ? 'draggable'
-                      : ''}"
-                    data-user-id={invitation.invitedUserId}
+                    class="player-slot filled team-black {isCreator ? 'draggable' : ''}"
+                    data-user-id={player.userId}
                   >
                     <div
                       class="player-main"
                       on:pointerdown={(e) =>
-                        isCreator &&
-                        invitation.status === "accepted" &&
-                        handlePointerDown(e, invitation.invitedUserId)}
+                        isCreator && handlePointerDown(e, player.userId)}
                       on:pointermove={handlePointerMove}
                       on:pointerup={handlePointerUp}
                       on:pointercancel={handlePointerUp}
                     >
-                      {#if invitation.invitedUser.image}
+                      {#if player.user.image}
                         <img
-                          src={invitation.invitedUser.image}
-                          alt={invitation.invitedUser.name}
+                          src={player.user.image}
+                          alt={player.user.name}
                           class="player-avatar"
                         />
                       {:else}
                         <div class="player-icon">
-                          {invitation.invitedUser.name?.charAt(0) || "?"}
+                          {player.user.name?.charAt(0) || "?"}
                         </div>
                       {/if}
                       <div class="player-info">
                         <div class="player-name">
-                          {invitation.invitedUserId === user?.id
+                          {player.userId === user?.id
                             ? "You"
-                            : invitation.invitedUser.name}
+                            : player.user.name}
+                          {#if player.isCreator}
+                            <span class="creator-badge">Creator</span>
+                          {/if}
                         </div>
                         <div class="player-status">
-                          {#if invitation.status === "pending"}
-                            Invited (Pending)
-                          {/if}
+                          ⚫ Team Black
                         </div>
                       </div>
                     </div>
-                    {#if isCreator && game.status !== "inProgress" && game.status !== "complete"}
+                    {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
                       <button
                         class="eject-btn"
                         on:click={() =>
                           ejectPlayer(
-                            invitation.invitedUserId,
-                            invitation.invitedUser.name
+                            player.userId,
+                            player.user.name
                           )}
-                        disabled={ejectingPlayerId === invitation.invitedUserId}
+                        disabled={ejectingPlayerId === player.userId}
                         title="Eject player"
                       >
-                        {ejectingPlayerId === invitation.invitedUserId
+                        {ejectingPlayerId === player.userId
                           ? "..."
                           : "✕"}
                       </button>
@@ -861,7 +850,7 @@
                 {/each}
 
                 <!-- Empty black slots -->
-                {#each Array(Math.max(0, 2 - invitations.filter((inv) => inv.team === "black").length)) as _, i}
+                {#each Array(Math.max(0, 2 - gamePlayers.filter((p) => p.team === "black").length)) as _, i}
                   <div class="player-slot empty team-black">
                     <div class="player-icon">⭕</div>
                     <div class="player-info">
@@ -1429,6 +1418,19 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+  }
+
+  .creator-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 0.7rem;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-left: 0.5rem;
   }
 
   .teams-container {

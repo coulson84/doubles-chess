@@ -39,6 +39,22 @@ export const load: PageServerLoad = async (event) => {
 			throw error(404, 'Game not found');
 		}
 
+		// Load all game players (creator + invited players)
+		const gamePlayers = await knex('game_players')
+			.where({ gameId })
+			.join('users', 'game_players.userId', 'users.id')
+			.select(
+				'game_players.id',
+				'game_players.gameId',
+				'game_players.userId',
+				'game_players.team',
+				'game_players.isCreator',
+				'game_players.joinedAt',
+				'users.id as user_id',
+				'users.name as user_name',
+				'users.image as user_image'
+			);
+
 		// Load pending and accepted invitations with user details
 		const invitations = await knex('game_invitations')
 			.where({ gameId })
@@ -86,11 +102,27 @@ export const load: PageServerLoad = async (event) => {
 				.first();
 		}
 
+		// Transform game players data
+		const formattedGamePlayers = gamePlayers.map((player: any) => ({
+			id: player.id,
+			gameId: player.gameId,
+			userId: player.userId,
+			team: player.team,
+			isCreator: player.isCreator,
+			joinedAt: player.joinedAt,
+			user: {
+				id: player.user_id,
+				name: player.user_name,
+				image: player.user_image
+			}
+		}));
+
 		return {
 			session,
 			game: game as Game,
 			invitations: formattedInvitations,
-			myInvitation
+			myInvitation,
+			gamePlayers: formattedGamePlayers
 		};
 	} catch (err) {
 		if (err && typeof err === 'object' && 'status' in err) {
