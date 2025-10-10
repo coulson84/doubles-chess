@@ -12,6 +12,7 @@
   $: session = data.session;
   $: user = session?.user;
   $: games = data.games || [];
+  $: availableGames = data.availableGames || [];
 
   console.log(user, games);
   let isCreatingGame = false;
@@ -206,6 +207,50 @@
                     <strong>Last Updated:</strong>
                     {formatDate(game.updatedAt)}
                   </p>
+                </div>
+                <div class="game-actions-row">
+                  <a href="/games/{game.id}" class="btn-primary">View Game</a>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <div class="content">
+        <h2>Available Games</h2>
+        {#if availableGames.length === 0}
+          <p class="no-games">
+            No public games available. Create a new game to get started!
+          </p>
+        {:else}
+          <div class="games-list">
+            {#each availableGames as game}
+              <div class="game-card">
+                <div class="game-header">
+                  <h3>Game {game.id.slice(0, 8)}</h3>
+                  <div class="badges">
+                    <span
+                      class="status-badge"
+                      style="background-color: {getStatusColor(game.status)}"
+                    >
+                      {getStatusDisplay(game.status)}
+                    </span>
+                    <span class="role-badge public">Public</span>
+                  </div>
+                </div>
+                <div class="game-details">
+                  <p><strong>Created:</strong> {formatDate(game.createdAt)}</p>
+                  <p>
+                    <strong>Last Updated:</strong>
+                    {formatDate(game.updatedAt)}
+                  </p>
+                  {#if game.timeLimitPerMove}
+                    <p><strong>Time Per Move:</strong> {game.timeLimitPerMove}s</p>
+                  {/if}
+                  {#if game.isRated}
+                    <p><strong>Rated Game</strong></p>
+                  {/if}
                 </div>
                 <div class="game-actions-row">
                   <a href="/games/{game.id}" class="btn-primary">View Game</a>
@@ -503,6 +548,11 @@
   .role-badge.invitation {
     background: #fff3cd;
     color: #856404;
+  }
+
+  .role-badge.public {
+    background: #d4edda;
+    color: #155724;
   }
 
   .game-details {
