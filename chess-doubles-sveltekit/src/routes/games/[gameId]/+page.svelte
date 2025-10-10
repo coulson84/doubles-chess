@@ -47,9 +47,21 @@
         }
       );
 
+      // Handle player ejected
+      const unsubEjected = wsClient.on(
+        "player_ejected",
+        async (payload: any) => {
+          if (payload.gameId === game.id) {
+            alert(payload.message);
+            goto("/");
+          }
+        }
+      );
+
       return () => {
         unsubAccepted();
         unsubDeclined();
+        unsubEjected();
       };
     }
   });
@@ -373,6 +385,37 @@
       isLeaving = false;
     }
   }
+
+  // Eject player (creator only)
+  let ejectingPlayerId: string | null = null;
+
+  async function ejectPlayer(userId: string, playerName: string) {
+    if (!confirm(`Are you sure you want to eject ${playerName} from the game?`)) {
+      return;
+    }
+
+    ejectingPlayerId = userId;
+
+    try {
+      const response = await fetch(`/api/games/${game.id}/eject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      });
+
+      if (response.ok) {
+        await invalidateAll();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to eject player");
+      }
+    } catch (error) {
+      console.error("Error ejecting player:", error);
+      alert("An error occurred while ejecting the player");
+    } finally {
+      ejectingPlayerId = null;
+    }
+  }
 </script>
 
 <div class="container">
@@ -550,6 +593,16 @@
                       : "Invited (Pending)"}
                   </div>
                 </div>
+                {#if isCreator && game.status !== "inProgress" && game.status !== "complete"}
+                  <button
+                    class="eject-btn"
+                    on:click={() => ejectPlayer(invitation.invitedUserId, invitation.invitedUser.name)}
+                    disabled={ejectingPlayerId === invitation.invitedUserId}
+                    title="Eject player"
+                  >
+                    {ejectingPlayerId === invitation.invitedUserId ? "..." : "✕"}
+                  </button>
+                {/if}
               </div>
             {/each}
 
@@ -1045,6 +1098,7 @@
     align-items: center;
     gap: 1rem;
     transition: all 0.2s;
+    position: relative;
   }
 
   .player-slot.filled {
@@ -1061,6 +1115,35 @@
 
   .player-slot.empty {
     opacity: 0.6;
+  }
+
+  .eject-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-weight: bold;
+  }
+
+  .eject-btn:hover:not(:disabled) {
+    background: #c82333;
+    transform: scale(1.1);
+  }
+
+  .eject-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .player-icon {

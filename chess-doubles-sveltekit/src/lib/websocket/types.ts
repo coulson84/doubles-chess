@@ -4,6 +4,7 @@ export type WebSocketEventType =
 	| 'game_invite_declined'
 	| 'game_started'
 	| 'game_updated'
+	| 'player_ejected'
 	| 'friend_request_received'
 	| 'friend_request_accepted';
 
@@ -41,4 +42,9 @@ export interface FriendRequestPayload {
 		name: string;
 		image: string | null;
 	};
+}
+
+export interface PlayerEjectedPayload {
+	gameId: string;
+	message: string;
 }
