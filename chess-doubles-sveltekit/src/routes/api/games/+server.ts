@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   }
 };
 
-export const POST: RequestHandler = async ({ locals }) => {
+export const POST: RequestHandler = async ({ locals, request }) => {
   const session = await locals.auth();
 
   if (!session?.user?.id) {
@@ -31,11 +31,33 @@ export const POST: RequestHandler = async ({ locals }) => {
   }
 
   try {
+    const body = await request.json();
+
+    // Extract configuration options with defaults
+    const isPrivate = body.isPrivate ?? false;
+    const timeLimitPerMove = body.timeLimitPerMove ?? null;
+    const isRated = body.isRated ?? false;
+    const teamAssignment = body.teamAssignment ?? 'manual';
+
+    // Validate teamAssignment
+    if (!['manual', 'random'].includes(teamAssignment)) {
+      return json({ error: 'Invalid team assignment option' }, { status: 400 });
+    }
+
+    // Validate timeLimitPerMove if provided
+    if (timeLimitPerMove !== null && (typeof timeLimitPerMove !== 'number' || timeLimitPerMove <= 0)) {
+      return json({ error: 'Time limit per move must be a positive number' }, { status: 400 });
+    }
+
     // Create a new game
     const [game] = await knex('games')
       .insert({
         createdBy: session.user.id,
-        status: 'awaitingPlayers'
+        status: 'awaitingPlayers',
+        isPrivate,
+        timeLimitPerMove,
+        isRated,
+        teamAssignment
       })
       .returning('*');
 

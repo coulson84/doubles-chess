@@ -15,6 +15,26 @@
 
   console.log(user, games);
   let isCreatingGame = false;
+  let showConfigModal = false;
+
+  // Game configuration options
+  let gameConfig = {
+    isPrivate: false,
+    timeLimitPerMove: null as number | null,
+    isRated: false,
+    teamAssignment: 'manual' as 'manual' | 'random'
+  };
+
+  // Time limit options in seconds
+  const timeLimitOptions = [
+    { label: 'No limit', value: null },
+    { label: '1 minute', value: 60 },
+    { label: '10 minutes', value: 600 },
+    { label: '1 hour', value: 3600 },
+    { label: '12 hours', value: 43200 },
+    { label: '1 day', value: 86400 },
+    { label: '3 days', value: 259200 }
+  ];
 
   // WebSocket connection
   onMount(() => {
@@ -40,6 +60,14 @@
     wsClient.disconnect();
   });
 
+  function openConfigModal() {
+    showConfigModal = true;
+  }
+
+  function closeConfigModal() {
+    showConfigModal = false;
+  }
+
   async function createGame() {
     isCreatingGame = true;
     try {
@@ -48,10 +76,13 @@
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(gameConfig)
       });
 
       if (response.ok) {
         const { game } = await response.json();
+        // Reset config and close modal
+        closeConfigModal();
         // Navigate to the new game's page
         goto(`/games/${game.id}`);
       } else {
@@ -127,10 +158,10 @@
       <div class="game-actions">
         <button
           class="create-game-btn"
-          on:click={createGame}
+          on:click={openConfigModal}
           disabled={isCreatingGame}
         >
-          {isCreatingGame ? "Creating..." : "Create New Game"}
+          Create New Game
         </button>
       </div>
 
@@ -189,6 +220,72 @@
         <span slot="submitButton">Sign Out</span>
       </SignOut>
     </div>
+
+    <!-- Game Configuration Modal -->
+    {#if showConfigModal}
+      <div class="modal-overlay" on:click={closeConfigModal}>
+        <div class="modal-content" on:click|stopPropagation>
+          <div class="modal-header">
+            <h2>Game Configuration</h2>
+            <button class="close-btn" on:click={closeConfigModal}>×</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="config-section">
+              <label class="config-label">
+                <input type="checkbox" bind:checked={gameConfig.isPrivate} />
+                <span>Private Game</span>
+              </label>
+              <p class="help-text">Private games won't appear in public listings</p>
+            </div>
+
+            <div class="config-section">
+              <label class="config-label-block">
+                <span>Time Limit Per Move</span>
+                <select bind:value={gameConfig.timeLimitPerMove}>
+                  {#each timeLimitOptions as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </label>
+              <p class="help-text">Maximum time allowed for each move (currently not enforced during gameplay)</p>
+            </div>
+
+            <div class="config-section">
+              <label class="config-label">
+                <input type="checkbox" bind:checked={gameConfig.isRated} />
+                <span>Rated Game</span>
+              </label>
+              <p class="help-text">Rated games will affect player rankings (currently not enforced during gameplay)</p>
+            </div>
+
+            <div class="config-section">
+              <label class="config-label-block">
+                <span>Team Assignment</span>
+                <select bind:value={gameConfig.teamAssignment}>
+                  <option value="manual">Manual</option>
+                  <option value="random">Random</option>
+                </select>
+              </label>
+              <p class="help-text">Manual: Players choose teams. Random: Teams assigned automatically (currently not enforced during gameplay)</p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" on:click={closeConfigModal}>
+              Cancel
+            </button>
+            <button
+              class="btn-primary-modal"
+              on:click={createGame}
+              disabled={isCreatingGame}
+            >
+              {isCreatingGame ? "Creating..." : "Create Game"}
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
   {:else}
     <!-- Logged Out UI -->
     <div class="logged-out">
@@ -482,5 +579,164 @@
 
   :global(.sign-out-btn button:hover) {
     background: #c82333;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, sans-serif;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .close-btn:hover {
+    background: #f0f0f0;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .config-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .config-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .config-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .config-label-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .config-label-block span {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .config-label-block select {
+    padding: 0.75rem;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+  }
+
+  .help-text {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.875rem;
+    color: #666;
+    line-height: 1.4;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .btn-secondary {
+    flex: 1;
+    background: #f0f0f0;
+    color: #333;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+  }
+
+  .btn-secondary:hover {
+    background: #e0e0e0;
+  }
+
+  .btn-primary-modal {
+    flex: 1;
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+  }
+
+  .btn-primary-modal:hover:not(:disabled) {
+    background: #218838;
+  }
+
+  .btn-primary-modal:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
   }
 </style>

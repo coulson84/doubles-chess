@@ -250,6 +250,68 @@
       alert("An error occurred while starting the game");
     }
   }
+
+  // Game settings
+  let showSettingsModal = false;
+  let isSavingSettings = false;
+  let gameSettings = {
+    isPrivate: false,
+    timeLimitPerMove: null,
+    isRated: false,
+    teamAssignment: 'manual' as 'manual' | 'random'
+  };
+
+  $: if (game) {
+    // Update settings when game changes
+    gameSettings = {
+      isPrivate: game.isPrivate ?? false,
+      timeLimitPerMove: game.timeLimitPerMove ?? null,
+      isRated: game.isRated ?? false,
+      teamAssignment: game.teamAssignment ?? 'manual'
+    };
+  }
+
+  const timeLimitOptions = [
+    { label: 'No limit', value: null },
+    { label: '1 minute', value: 60 },
+    { label: '10 minutes', value: 600 },
+    { label: '1 hour', value: 3600 },
+    { label: '12 hours', value: 43200 },
+    { label: '1 day', value: 86400 },
+    { label: '3 days', value: 259200 }
+  ];
+
+  function openSettingsModal() {
+    showSettingsModal = true;
+  }
+
+  function closeSettingsModal() {
+    showSettingsModal = false;
+  }
+
+  async function saveSettings() {
+    isSavingSettings = true;
+    try {
+      const response = await fetch(`/api/games/${game.id}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(gameSettings)
+      });
+
+      if (response.ok) {
+        closeSettingsModal();
+        await invalidateAll();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to update settings");
+      }
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      alert("An error occurred while updating settings");
+    } finally {
+      isSavingSettings = false;
+    }
+  }
 </script>
 
 <div class="container">
@@ -281,7 +343,14 @@
 
       <div class="lobby-content">
         <div class="game-info-card">
-          <h2>Game Information</h2>
+          <div class="card-header">
+            <h2>Game Information</h2>
+            {#if isCreator && (game.status === 'awaitingPlayers' || game.status === 'readyToStart')}
+              <button class="settings-btn" on:click={openSettingsModal} title="Game Settings">
+                ⚙️
+              </button>
+            {/if}
+          </div>
           <div class="info-grid">
             <div class="info-item">
               <span class="label">Game ID:</span>
@@ -298,6 +367,22 @@
             <div class="info-item">
               <span class="label">Your Role:</span>
               <span class="value">{isCreator ? "Game Creator" : "Player"}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Visibility:</span>
+              <span class="value">{game?.isPrivate ? "Private" : "Public"}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Time Per Move:</span>
+              <span class="value">{game?.timeLimitPerMove ? `${game.timeLimitPerMove}s` : "No limit"}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Rated:</span>
+              <span class="value">{game?.isRated ? "Yes" : "No"}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Team Assignment:</span>
+              <span class="value">{game?.teamAssignment === 'manual' ? 'Manual' : 'Random'}</span>
             </div>
           </div>
         </div>
@@ -489,6 +574,72 @@
     </div>
   {/if}
 </div>
+
+<!-- Settings Modal -->
+{#if showSettingsModal}
+  <div class="modal-overlay" on:click={closeSettingsModal}>
+    <div class="modal-content" on:click|stopPropagation>
+      <div class="modal-header">
+        <h2>Game Settings</h2>
+        <button class="close-btn" on:click={closeSettingsModal}>×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="config-section">
+          <label class="config-label">
+            <input type="checkbox" bind:checked={gameSettings.isPrivate} />
+            <span>Private Game</span>
+          </label>
+          <p class="help-text">Private games won't appear in public listings</p>
+        </div>
+
+        <div class="config-section">
+          <label class="config-label-block">
+            <span>Time Limit Per Move</span>
+            <select bind:value={gameSettings.timeLimitPerMove}>
+              {#each timeLimitOptions as option}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </label>
+          <p class="help-text">Maximum time allowed for each move (currently not enforced during gameplay)</p>
+        </div>
+
+        <div class="config-section">
+          <label class="config-label">
+            <input type="checkbox" bind:checked={gameSettings.isRated} />
+            <span>Rated Game</span>
+          </label>
+          <p class="help-text">Rated games will affect player rankings (currently not enforced during gameplay)</p>
+        </div>
+
+        <div class="config-section">
+          <label class="config-label-block">
+            <span>Team Assignment</span>
+            <select bind:value={gameSettings.teamAssignment}>
+              <option value="manual">Manual</option>
+              <option value="random">Random</option>
+            </select>
+          </label>
+          <p class="help-text">Manual: Players choose teams. Random: Teams assigned automatically (currently not enforced during gameplay)</p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" on:click={closeSettingsModal}>
+          Cancel
+        </button>
+        <button
+          class="btn-primary-modal"
+          on:click={saveSettings}
+          disabled={isSavingSettings}
+        >
+          {isSavingSettings ? "Saving..." : "Save Settings"}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .container {
@@ -985,5 +1136,168 @@
     .players-grid {
       grid-template-columns: 1fr;
     }
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, sans-serif;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .close-btn:hover {
+    background: #f0f0f0;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .config-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .config-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .config-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .config-label-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .config-label-block span {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .config-label-block select {
+    padding: 0.75rem;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .btn-primary-modal {
+    flex: 1;
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+  }
+
+  .btn-primary-modal:hover:not(:disabled) {
+    background: #218838;
+  }
+
+  .btn-primary-modal:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .card-header h2 {
+    margin: 0;
+  }
+
+  .settings-btn {
+    background: #f0f0f0;
+    border: none;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .settings-btn:hover {
+    background: #e0e0e0;
   }
 </style>
