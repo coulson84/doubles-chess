@@ -340,6 +340,39 @@
       isJoining = false;
     }
   }
+
+  // Leave game
+  let isLeaving = false;
+  let leaveError = "";
+
+  async function leaveGame() {
+    if (!confirm("Are you sure you want to leave this game?")) {
+      return;
+    }
+
+    isLeaving = true;
+    leaveError = "";
+
+    try {
+      const response = await fetch(`/api/games/${game.id}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (response.ok) {
+        // Redirect to home page after leaving
+        goto("/");
+      } else {
+        const error = await response.json();
+        leaveError = error.error || "Failed to leave game";
+      }
+    } catch (error) {
+      console.error("Error leaving game:", error);
+      leaveError = "An error occurred while leaving the game";
+    } finally {
+      isLeaving = false;
+    }
+  }
 </script>
 
 <div class="container">
@@ -569,14 +602,26 @@
               <p class="error-text">{respondError}</p>
             {/if}
           {:else if myInvitation?.status === "accepted"}
-            {#if game.status === "readyToStart"}
-              <button class="btn-primary" disabled>
-                Waiting for creator to start game...
+            <div class="accepted-player-actions">
+              {#if game.status === "readyToStart"}
+                <button class="btn-primary" disabled>
+                  Waiting for creator to start game...
+                </button>
+              {:else}
+                <button class="btn-primary" disabled>
+                  Waiting for other players...
+                </button>
+              {/if}
+              <button
+                class="btn-leave"
+                on:click={leaveGame}
+                disabled={isLeaving}
+              >
+                {isLeaving ? "Leaving..." : "Leave Game"}
               </button>
-            {:else}
-              <button class="btn-primary" disabled>
-                Waiting for other players...
-              </button>
+            </div>
+            {#if leaveError}
+              <p class="error-text">{leaveError}</p>
             {/if}
           {:else if myInvitation?.status === "declined"}
             <p class="info-text">You have declined this invitation</p>
@@ -1064,6 +1109,13 @@
     margin-bottom: 0.5rem;
   }
 
+  .accepted-player-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+
   .btn-accept,
   .btn-decline {
     padding: 1rem 2rem;
@@ -1096,6 +1148,28 @@
 
   .btn-accept:disabled,
   .btn-decline:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-leave {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+    background: #dc3545;
+    color: white;
+  }
+
+  .btn-leave:hover:not(:disabled) {
+    background: #c82333;
+  }
+
+  .btn-leave:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
