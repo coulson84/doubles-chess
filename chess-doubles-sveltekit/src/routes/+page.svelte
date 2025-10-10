@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SignIn, SignOut } from "@auth/sveltekit/components";
+  import { SignOut } from "@auth/sveltekit/components";
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
   import NotificationPrompt from "$lib/components/NotificationPrompt.svelte";
@@ -10,6 +10,7 @@
   $: user = session?.user;
   $: games = data.games || [];
 
+  console.log(user, games);
   let isCreatingGame = false;
 
   async function createGame() {
@@ -126,11 +127,11 @@
                     >
                       {getStatusDisplay(game.status)}
                     </span>
-                    {#if game.role === 'invited'}
+                    {#if game.role === "invited"}
                       <span class="role-badge invitation">
-                        {#if game.invitationStatus === 'pending'}
+                        {#if game.invitationStatus === "pending"}
                           Invited
-                        {:else if game.invitationStatus === 'accepted'}
+                        {:else if game.invitationStatus === "accepted"}
                           Accepted
                         {:else}
                           Declined
@@ -165,15 +166,13 @@
     <!-- Logged Out UI -->
     <div class="logged-out">
       <h1>Welcome to Chess Doubles</h1>
-      <p>Please sign in with your Google account to continue</p>
+      <p>Sign in or create an account to start playing</p>
 
       <div class="chess-battle">
         <img src="/title_image.jpg" alt="Chess Battle" />
       </div>
 
-      <SignIn provider="google" class="sign-in-btn">
-        <span slot="submitButton">Sign in with Google</span>
-      </SignIn>
+      <a href="/auth" class="auth-btn"> Get Started </a>
     </div>
   {/if}
 </div>
@@ -419,14 +418,31 @@
   }
 
   /* Button Styles */
-  :global(.sign-in-btn),
+  .auth-btn {
+    display: inline-block;
+    margin-top: 2rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .auth-btn:hover {
+    background: #5568d3;
+  }
+
   :global(.sign-out-btn) {
     margin-top: 2rem;
   }
 
-  :global(.sign-in-btn button),
   :global(.sign-out-btn button) {
-    background: #4285f4;
+    background: #dc3545;
     color: white;
     border: none;
     padding: 1rem 2rem;
@@ -435,15 +451,6 @@
     cursor: pointer;
     transition: background 0.2s;
     font-weight: 500;
-  }
-
-  :global(.sign-in-btn button:hover),
-  :global(.sign-out-btn button:hover) {
-    background: #357ae8;
-  }
-
-  :global(.sign-out-btn button) {
-    background: #dc3545;
   }
 
   :global(.sign-out-btn button:hover) {
