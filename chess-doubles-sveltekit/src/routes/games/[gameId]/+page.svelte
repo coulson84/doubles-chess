@@ -13,7 +13,6 @@
   $: invitations = data.invitations || [];
   $: myInvitation = data.myInvitation;
   $: totalPlayers = 1 + invitations.length; // Creator + invited players
-  $: canInviteMore = totalPlayers < 4;
   $: isCreator = user?.id === game?.createdBy;
   // Determine if we should show lobby or game board
   $: isLobby =
@@ -167,11 +166,6 @@
     inviteSuccess = "";
 
     // Check if we can invite more players
-    if (!canInviteMore) {
-      inviteError = "Maximum 4 players (1 creator + 3 invited)";
-      return;
-    }
-
     try {
       const response = await fetch(`/api/games/${game.id}/invite`, {
         method: "POST",
@@ -320,15 +314,12 @@
               {/if}
               <input
                 type="text"
-                placeholder={canInviteMore
-                  ? "Invite players"
-                  : "Maximum players reached (4/4)"}
+                placeholder="Invite players"
                 class="invite-input"
                 bind:value={searchQuery}
                 on:input={handleSearchInput}
                 on:focus={handleSearchFocus}
                 on:blur={handleSearchBlur}
-                disabled={!canInviteMore}
               />
               {#if showDropdown}
                 <div class="search-dropdown">
@@ -440,7 +431,8 @@
                 Waiting for Players ({totalPlayers}/4)
               </button>
               <p class="help-text">
-                Share the game ID with your friends to invite them to join!
+                You can invite as many players as you like, but only the first 3
+                to accept will be able to play.
               </p>
             {/if}
           {:else if myInvitation?.status === "pending"}

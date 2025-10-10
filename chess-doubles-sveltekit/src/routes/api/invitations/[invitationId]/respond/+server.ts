@@ -35,6 +35,23 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		// Update invitation status and check if game is ready
 		await db.transaction(async (trx) => {
+			// If accepting, check if game is already full
+			if (status === 'accepted') {
+				// Lock and count existing accepted invitations
+				const acceptedInvites = await trx('game_invitations')
+					.where({ gameId: invitation.gameId, status: 'accepted' })
+					.select('id')
+					.forUpdate();
+
+				const acceptedCount = acceptedInvites.length;
+
+				// If already 3 players accepted, game is full
+				if (acceptedCount >= 3) {
+					throw new Error('Game is full. All player slots have been filled.');
+				}
+			}
+
+			// Update invitation status
 			await trx('game_invitations')
 				.where({ id: invitationId })
 				.update({
@@ -42,7 +59,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 					respondedAt: db.fn.now()
 				});
 
-			// If accepted, check if all 3 invited players have accepted
+			// If accepted, check if this was the 3rd player to accept
 			if (status === 'accepted') {
 				const acceptedInvites = await trx('game_invitations')
 					.where({ gameId: invitation.gameId, status: 'accepted' })
@@ -51,7 +68,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 				const acceptedCount = Number(acceptedInvites?.count || 0);
 
-				// If we have 3 accepted invitations (creator + 3 players = 4 total)
+				// If we now have 3 accepted invitations (creator + 3 players = 4 total)
 				if (acceptedCount === 3) {
 					await trx('games')
 						.where({ id: invitation.gameId })
@@ -75,6 +92,12 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		return json({ success: true, status });
 	} catch (error) {
 		console.error('Error responding to invitation:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Failed to respond to invitation';
+
+		if (errorMessage.includes('Game is full')) {
+			return json({ error: errorMessage }, { status: 400 });
+		}
+
 		return json({ error: 'Failed to respond to invitation' }, { status: 500 });
 	}
 };
