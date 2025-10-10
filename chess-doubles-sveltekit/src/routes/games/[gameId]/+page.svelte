@@ -115,7 +115,7 @@
     isSearching = true;
     try {
       const response = await fetch(
-        `/api/users/search?q=${encodeURIComponent(query)}`
+        `/api/users/search?q=${encodeURIComponent(query)}&gameId=${game.id}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -330,7 +330,7 @@
                       {#if searchQuery.trim()}
                         No users found
                       {:else}
-                        Search for players to invite
+                        Recent players will appear here
                       {/if}
                     </div>
                   {:else}

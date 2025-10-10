@@ -21,7 +21,6 @@ type GameInvitation = {
 	invitedUser: {
 		id: string;
 		name: string;
-		email: string;
 		image: string | null;
 	};
 };
@@ -54,7 +53,6 @@ export const load: PageServerLoad = async (event) => {
 				'game_invitations.respondedAt',
 				'users.id as user_id',
 				'users.name as user_name',
-				'users.email as user_email',
 				'users.image as user_image'
 			);
 
@@ -70,7 +68,6 @@ export const load: PageServerLoad = async (event) => {
 			invitedUser: {
 				id: inv.user_id,
 				name: inv.user_name,
-				email: inv.user_email,
 				image: inv.user_image
 			}
 		}));

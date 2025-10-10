@@ -1,71 +1,80 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import knex from '../../../../db.server';
+import { json } from "@sveltejs/kit";
+import type { RequestHandler } from "./$types";
+import knex from "../../../../db.server";
+import type { Knex } from "knex";
+
+function excludeUsersAlreadyInvited(
+  queryBuilder: Knex.QueryBuilder,
+  gameId?: string
+) {
+  if (gameId) {
+    return queryBuilder.whereNotIn(
+      "users.id",
+      function (this: Knex.QueryBuilder) {
+        this.select("invitedUserId")
+          .from("game_invitations")
+          .where("game_invitations.gameId", gameId)
+          .union(function (this: Knex.QueryBuilder) {
+            this.select("invitedById")
+              .from("game_invitations")
+              .where("gameId", gameId);
+          });
+      }
+    );
+  }
+}
 
 export const GET: RequestHandler = async ({ locals, url }) => {
   const session = await locals.auth();
 
   if (!session?.user?.id) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const query = url.searchParams.get('q') || '';
+  const query = url.searchParams.get("q") || "";
   const currentUserId = session.user.id;
+  const gameId = url.searchParams.get("gameId");
 
   try {
     if (!query.trim()) {
-      // If no query, return only friends
-      const friends = await knex('friends')
+      // If no query, return recently active users (ordered by latest session)
+      const recentUsersQuery = knex("users")
         .select(
-          'users.id',
-          'users.name',
-          'users.email',
-          'users.image',
-          knex.raw('true as is_friend')
+          "users.id",
+          "users.name",
+          "users.image",
+          knex.raw("MAX(sessions.id::text) as last_active")
         )
-        .join('users', function() {
-          this.on('users.id', '=', 'friends.friendId')
-            .orOn('users.id', '=', 'friends.userId')
-        })
-        .where(function() {
-          this.where('friends.userId', currentUserId)
-            .orWhere('friends.friendId', currentUserId);
-        })
-        .where('friends.status', 'accepted')
-        .where('users.id', '!=', currentUserId)
+        .leftJoin("sessions", "sessions.userId", "users.id")
+        .where("users.id", "!=", currentUserId)
+        .orderBy("last_active", "desc")
+        .groupBy("users.id", "users.name", "users.image")
         .limit(10);
 
-      return json({ users: friends });
+      if (gameId) {
+        excludeUsersAlreadyInvited(recentUsersQuery, gameId);
+      }
+
+      return json({ users: await recentUsersQuery });
     }
 
-    // Search across all users
+    // Search across all users by name only (don't expose emails)
     const searchPattern = `%${query.trim().toLowerCase()}%`;
 
     // Get all matching users
-    const allUsers = await knex('users')
-      .select(
-        'users.id',
-        'users.name',
-        'users.email',
-        'users.image',
-        knex.raw('CASE WHEN friends.id IS NOT NULL THEN 1 ELSE 0 END as is_friend')
-      )
-      .leftOuterJoin('friends', function() {
-        this.on('users.id', '=', 'friends.friendId')
-          .orOn('users.id', '=', 'friends.userId')
-          .andOn('friends.status', '=', knex.raw('?', ['accepted']));
-      })
-      .where('users.id', '!=', currentUserId)
-      .where(function() {
-        this.whereRaw('LOWER(users.name) LIKE ?', [searchPattern])
-          .orWhereRaw('LOWER(users.email) LIKE ?', [searchPattern]);
-      })
-      .orderBy('is_friend', 'desc')
+    const allUsersQuery = knex("users")
+      .select("users.id", "users.name", "users.image")
+      .where("users.id", "!=", currentUserId)
+      .whereRaw("LOWER(users.name) LIKE ?", [searchPattern])
       .limit(10);
 
-    return json({ users: allUsers });
+    if (gameId) {
+      excludeUsersAlreadyInvited(allUsersQuery, gameId);
+    }
+
+    return json({ users: await allUsersQuery });
   } catch (error) {
-    console.error('Error searching users:', error);
-    return json({ error: 'Failed to search users' }, { status: 500 });
+    console.error("Error searching users:", error);
+    return json({ error: "Failed to search users" }, { status: 500 });
   }
 };
