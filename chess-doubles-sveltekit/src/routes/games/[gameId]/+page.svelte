@@ -312,6 +312,34 @@
       isSavingSettings = false;
     }
   }
+
+  // Join game
+  let isJoining = false;
+  let joinError = "";
+
+  async function joinGame() {
+    isJoining = true;
+    joinError = "";
+
+    try {
+      const response = await fetch(`/api/games/${game.id}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (response.ok) {
+        await invalidateAll();
+      } else {
+        const error = await response.json();
+        joinError = error.error || "Failed to join game";
+      }
+    } catch (error) {
+      console.error("Error joining game:", error);
+      joinError = "An error occurred while joining the game";
+    } finally {
+      isJoining = false;
+    }
+  }
 </script>
 
 <div class="container">
@@ -553,7 +581,26 @@
           {:else if myInvitation?.status === "declined"}
             <p class="info-text">You have declined this invitation</p>
           {:else}
-            <button class="btn-primary"> Ready to Play </button>
+            <!-- User is not invited and not creator - show join button for public games -->
+            {#if !game.isPrivate && (game.status === "awaitingPlayers" || game.status === "readyToStart")}
+              <button
+                class="btn-primary"
+                on:click={joinGame}
+                disabled={isJoining}
+              >
+                {isJoining ? "Joining..." : "Join Game"}
+              </button>
+              <p class="help-text">
+                Join this public game and play with other players!
+              </p>
+              {#if joinError}
+                <p class="error-text">{joinError}</p>
+              {/if}
+            {:else if game.isPrivate}
+              <p class="info-text">This is a private game. You need an invitation to join.</p>
+            {:else}
+              <button class="btn-primary" disabled>Waiting for Players</button>
+            {/if}
           {/if}
         </div>
       </div>
