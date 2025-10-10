@@ -44,10 +44,38 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 				} else if (existingInvite.status === 'pending') {
 					throw new Error('You have already been invited to this game');
 				} else if (existingInvite.status === 'declined') {
+					// Determine team assignment for rejoin (always random)
+					// Get current team counts
+					const teamCounts = await trx('game_invitations')
+						.where({ gameId, status: 'accepted' })
+						.select('team')
+						.then(rows => {
+							const counts = { white: 0, black: 0 };
+							rows.forEach(row => {
+								if (row.team === 'white') counts.white++;
+								if (row.team === 'black') counts.black++;
+							});
+							return counts;
+						});
+
+					// Assign to team with fewer players, or random if equal
+					let assignedTeam: 'white' | 'black';
+					if (teamCounts.white < teamCounts.black) {
+						assignedTeam = 'white';
+					} else if (teamCounts.black < teamCounts.white) {
+						assignedTeam = 'black';
+					} else {
+						assignedTeam = Math.random() < 0.5 ? 'white' : 'black';
+					}
+
 					// Allow rejoining if previously declined
 					await trx('game_invitations')
 						.where({ id: existingInvite.id })
-						.update({ status: 'accepted', respondedAt: trx.fn.now() });
+						.update({
+							status: 'accepted',
+							respondedAt: trx.fn.now(),
+							team: assignedTeam
+						});
 					return;
 				}
 			}
@@ -55,11 +83,29 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			// Check if game is already full (3 accepted invitations)
 			const acceptedInvites = await trx('game_invitations')
 				.where({ gameId, status: 'accepted' })
-				.select('id')
+				.select('id', 'team')
 				.forUpdate();
 
 			if (acceptedInvites.length >= 3) {
 				throw new Error('Game is full. All player slots have been filled.');
+			}
+
+			// Determine team assignment for new join (always random)
+			// Get current team counts
+			const teamCounts = { white: 0, black: 0 };
+			acceptedInvites.forEach(invite => {
+				if (invite.team === 'white') teamCounts.white++;
+				if (invite.team === 'black') teamCounts.black++;
+			});
+
+			// Assign to team with fewer players, or random if equal
+			let assignedTeam: 'white' | 'black';
+			if (teamCounts.white < teamCounts.black) {
+				assignedTeam = 'white';
+			} else if (teamCounts.black < teamCounts.white) {
+				assignedTeam = 'black';
+			} else {
+				assignedTeam = Math.random() < 0.5 ? 'white' : 'black';
 			}
 
 			// Create a new accepted invitation
@@ -68,7 +114,8 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 				invitedBy: game.createdBy,
 				invitedUserId: session.user.id,
 				status: 'accepted',
-				respondedAt: trx.fn.now()
+				respondedAt: trx.fn.now(),
+				team: assignedTeam
 			});
 
 			// If this is the 3rd player, update game status to readyToStart
