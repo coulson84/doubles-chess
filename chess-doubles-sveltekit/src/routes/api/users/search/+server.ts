@@ -15,7 +15,7 @@ function excludeUsersAlreadyInvited(
           .from("game_invitations")
           .where("game_invitations.gameId", gameId)
           .union(function (this: Knex.QueryBuilder) {
-            this.select("invitedById")
+            this.select("invitedBy")
               .from("game_invitations")
               .where("gameId", gameId);
           });

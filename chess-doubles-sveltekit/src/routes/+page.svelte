@@ -218,7 +218,16 @@
       </div>
 
       <div class="content">
-        <h2>Available Games</h2>
+        <div class="section-header">
+          <h2>Available Games</h2>
+          <button
+            class="refresh-btn"
+            on:click={() => invalidateAll()}
+            title="Refresh available games"
+          >
+            🔄
+          </button>
+        </div>
         {#if availableGames.length === 0}
           <p class="no-games">
             No public games available. Create a new game to get started!
@@ -458,6 +467,41 @@
 
   .content {
     margin-bottom: 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .section-header h2 {
+    font-size: 2rem;
+    margin: 0;
+    color: #333;
+  }
+
+  .refresh-btn {
+    background: #f0f0f0;
+    border: none;
+    font-size: 1.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .refresh-btn:hover {
+    background: #e0e0e0;
+    transform: rotate(90deg);
+  }
+
+  .refresh-btn:active {
+    transform: rotate(180deg);
   }
 
   .content h2 {
