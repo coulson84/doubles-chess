@@ -16,6 +16,7 @@ type GameInvitation = {
 	invitedBy: string;
 	invitedUserId: string;
 	status: 'pending' | 'accepted' | 'declined';
+	team: 'white' | 'black' | null;
 	createdAt: Date;
 	respondedAt: Date | null;
 	invitedUser: {
@@ -49,6 +50,7 @@ export const load: PageServerLoad = async (event) => {
 				'game_invitations.invitedBy',
 				'game_invitations.invitedUserId',
 				'game_invitations.status',
+				'game_invitations.team',
 				'game_invitations.createdAt',
 				'game_invitations.respondedAt',
 				'users.id as user_id',
@@ -63,6 +65,7 @@ export const load: PageServerLoad = async (event) => {
 			invitedBy: inv.invitedBy,
 			invitedUserId: inv.invitedUserId,
 			status: inv.status,
+			team: inv.team,
 			createdAt: inv.createdAt,
 			respondedAt: inv.respondedAt,
 			invitedUser: {

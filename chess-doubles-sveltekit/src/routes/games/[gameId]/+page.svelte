@@ -270,7 +270,7 @@
     isPrivate: false,
     timeLimitPerMove: null,
     isRated: false,
-    teamAssignment: 'manual' as 'manual' | 'random'
+    teamAssignment: "manual" as "manual" | "random",
   };
 
   $: if (game) {
@@ -279,18 +279,18 @@
       isPrivate: game.isPrivate ?? false,
       timeLimitPerMove: game.timeLimitPerMove ?? null,
       isRated: game.isRated ?? false,
-      teamAssignment: game.teamAssignment ?? 'manual'
+      teamAssignment: game.teamAssignment ?? "manual",
     };
   }
 
   const timeLimitOptions = [
-    { label: 'No limit', value: null },
-    { label: '1 minute', value: 60 },
-    { label: '10 minutes', value: 600 },
-    { label: '1 hour', value: 3600 },
-    { label: '12 hours', value: 43200 },
-    { label: '1 day', value: 86400 },
-    { label: '3 days', value: 259200 }
+    { label: "No limit", value: null },
+    { label: "1 minute", value: 60 },
+    { label: "10 minutes", value: 600 },
+    { label: "1 hour", value: 3600 },
+    { label: "12 hours", value: 43200 },
+    { label: "1 day", value: 86400 },
+    { label: "3 days", value: 259200 },
   ];
 
   function openSettingsModal() {
@@ -307,7 +307,7 @@
       const response = await fetch(`/api/games/${game.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(gameSettings)
+        body: JSON.stringify(gameSettings),
       });
 
       if (response.ok) {
@@ -336,7 +336,7 @@
     try {
       const response = await fetch(`/api/games/${game.id}/join`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
@@ -368,7 +368,7 @@
     try {
       const response = await fetch(`/api/games/${game.id}/leave`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
@@ -390,7 +390,9 @@
   let ejectingPlayerId: string | null = null;
 
   async function ejectPlayer(userId: string, playerName: string) {
-    if (!confirm(`Are you sure you want to eject ${playerName} from the game?`)) {
+    if (
+      !confirm(`Are you sure you want to eject ${playerName} from the game?`)
+    ) {
       return;
     }
 
@@ -400,7 +402,7 @@
       const response = await fetch(`/api/games/${game.id}/eject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId }),
       });
 
       if (response.ok) {
@@ -414,6 +416,33 @@
       alert("An error occurred while ejecting the player");
     } finally {
       ejectingPlayerId = null;
+    }
+  }
+
+  // Assign team (creator only)
+  let assigningTeam: string | null = null;
+
+  async function assignTeam(userId: string, team: "white" | "black") {
+    assigningTeam = userId;
+
+    try {
+      const response = await fetch(`/api/games/${game.id}/assign-team`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, team }),
+      });
+
+      if (response.ok) {
+        await invalidateAll();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to assign team");
+      }
+    } catch (error) {
+      console.error("Error assigning team:", error);
+      alert("An error occurred while assigning the team");
+    } finally {
+      assigningTeam = null;
     }
   }
 </script>
@@ -449,8 +478,12 @@
         <div class="game-info-card">
           <div class="card-header">
             <h2>Game Information</h2>
-            {#if isCreator && (game.status === 'awaitingPlayers' || game.status === 'readyToStart')}
-              <button class="settings-btn" on:click={openSettingsModal} title="Game Settings">
+            {#if isCreator && (game.status === "awaitingPlayers" || game.status === "readyToStart")}
+              <button
+                class="settings-btn"
+                on:click={openSettingsModal}
+                title="Game Settings"
+              >
                 ⚙️
               </button>
             {/if}
@@ -474,11 +507,16 @@
             </div>
             <div class="info-item">
               <span class="label">Visibility:</span>
-              <span class="value">{game?.isPrivate ? "Private" : "Public"}</span>
+              <span class="value">{game?.isPrivate ? "Private" : "Public"}</span
+              >
             </div>
             <div class="info-item">
               <span class="label">Time Per Move:</span>
-              <span class="value">{game?.timeLimitPerMove ? `${game.timeLimitPerMove}s` : "No limit"}</span>
+              <span class="value"
+                >{game?.timeLimitPerMove
+                  ? `${game.timeLimitPerMove}s`
+                  : "No limit"}</span
+              >
             </div>
             <div class="info-item">
               <span class="label">Rated:</span>
@@ -486,7 +524,9 @@
             </div>
             <div class="info-item">
               <span class="label">Team Assignment:</span>
-              <span class="value">{game?.teamAssignment === 'manual' ? 'Manual' : 'Random'}</span>
+              <span class="value"
+                >{game?.teamAssignment === "manual" ? "Manual" : "Random"}</span
+              >
             </div>
           </div>
         </div>
@@ -568,39 +608,77 @@
               <div
                 class="player-slot {invitation.status === 'accepted'
                   ? 'filled'
-                  : 'pending'}"
+                  : 'pending'} {invitation.team
+                  ? `team-${invitation.team}`
+                  : ''}"
               >
-                {#if invitation.invitedUser.image}
-                  <img
-                    src={invitation.invitedUser.image}
-                    alt={invitation.invitedUser.name}
-                    class="player-avatar"
-                  />
-                {:else}
-                  <div class="player-icon">
-                    {invitation.invitedUser.name?.charAt(0) || "?"}
-                  </div>
-                {/if}
-                <div class="player-info">
-                  <div class="player-name">
-                    {invitation.invitedUserId === user?.id
-                      ? "You"
-                      : invitation.invitedUser.name}
-                  </div>
-                  <div class="player-status">
-                    {invitation.status === "accepted"
-                      ? "Accepted"
-                      : "Invited (Pending)"}
+                <div class="player-main">
+                  {#if invitation.invitedUser.image}
+                    <img
+                      src={invitation.invitedUser.image}
+                      alt={invitation.invitedUser.name}
+                      class="player-avatar"
+                    />
+                  {:else}
+                    <div class="player-icon">
+                      {invitation.invitedUser.name?.charAt(0) || "?"}
+                    </div>
+                  {/if}
+                  <div class="player-info">
+                    <div class="player-name">
+                      {invitation.invitedUserId === user?.id
+                        ? "You"
+                        : invitation.invitedUser.name}
+                    </div>
+                    <div class="player-status">
+                      {#if invitation.team}
+                        <div class="team-info">
+                          <span class="team-indicator {invitation.team}">
+                            {invitation.team.charAt(0).toUpperCase() +
+                              invitation.team.slice(1)}
+                          </span>
+                          {#if isCreator && invitation.status === "accepted" && game.teamAssignment === "manual" && game.status !== "inProgress" && game.status !== "complete"}
+                            <button
+                              class="team-toggle-btn"
+                              on:click={() =>
+                                assignTeam(
+                                  invitation.invitedUserId,
+                                  invitation.team === "white"
+                                    ? "black"
+                                    : "white"
+                                )}
+                              disabled={assigningTeam ===
+                                invitation.invitedUserId}
+                              title="Toggle team"
+                            >
+                              {assigningTeam === invitation.invitedUserId
+                                ? "..."
+                                : "⇄"}
+                            </button>
+                          {/if}
+                        </div>
+                      {:else if invitation.status === "accepted"}
+                        <span class="team-unassigned">No team assigned</span>
+                      {:else}
+                        Invited (Pending)
+                      {/if}
+                    </div>
                   </div>
                 </div>
                 {#if isCreator && game.status !== "inProgress" && game.status !== "complete"}
                   <button
                     class="eject-btn"
-                    on:click={() => ejectPlayer(invitation.invitedUserId, invitation.invitedUser.name)}
+                    on:click={() =>
+                      ejectPlayer(
+                        invitation.invitedUserId,
+                        invitation.invitedUser.name
+                      )}
                     disabled={ejectingPlayerId === invitation.invitedUserId}
                     title="Eject player"
                   >
-                    {ejectingPlayerId === invitation.invitedUserId ? "..." : "✕"}
+                    {ejectingPlayerId === invitation.invitedUserId
+                      ? "..."
+                      : "✕"}
                   </button>
                 {/if}
               </div>
@@ -695,7 +773,9 @@
                 <p class="error-text">{joinError}</p>
               {/if}
             {:else if game.isPrivate}
-              <p class="info-text">This is a private game. You need an invitation to join.</p>
+              <p class="info-text">
+                This is a private game. You need an invitation to join.
+              </p>
             {:else}
               <button class="btn-primary" disabled>Waiting for Players</button>
             {/if}
@@ -747,7 +827,10 @@
               {/each}
             </select>
           </label>
-          <p class="help-text">Maximum time allowed for each move (currently not enforced during gameplay)</p>
+          <p class="help-text">
+            Maximum time allowed for each move (currently not enforced during
+            gameplay)
+          </p>
         </div>
 
         <div class="config-section">
@@ -755,7 +838,10 @@
             <input type="checkbox" bind:checked={gameSettings.isRated} />
             <span>Rated Game</span>
           </label>
-          <p class="help-text">Rated games will affect player rankings (currently not enforced during gameplay)</p>
+          <p class="help-text">
+            Rated games will affect player rankings (currently not enforced
+            during gameplay)
+          </p>
         </div>
 
         <div class="config-section">
@@ -766,7 +852,10 @@
               <option value="random">Random</option>
             </select>
           </label>
-          <p class="help-text">Manual: Players choose teams. Random: Teams assigned automatically (currently not enforced during gameplay)</p>
+          <p class="help-text">
+            Manual: Players choose teams. Random: Teams assigned automatically
+            (currently not enforced during gameplay)
+          </p>
         </div>
       </div>
 
@@ -1096,9 +1185,17 @@
     padding: 1.5rem;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 1rem;
-    transition: all 0.2s;
+    transition: all 0.3s;
     position: relative;
+  }
+
+  .player-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
   }
 
   .player-slot.filled {
@@ -1111,6 +1208,29 @@
     background: #fff3cd;
     border: 2px solid #ffc107;
     border-style: solid;
+  }
+
+  .player-slot.team-white {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+    border: 3px solid #666;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .player-slot.team-black {
+    background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%);
+    border: 3px solid #888;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: white;
+  }
+
+  .player-slot.team-black .player-name,
+  .player-slot.team-black .player-status {
+    color: white;
+  }
+
+  .player-slot.team-black .player-icon {
+    background: #555;
+    color: white;
   }
 
   .player-slot.empty {
@@ -1146,15 +1266,89 @@
     cursor: not-allowed;
   }
 
+  .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+  .team-toggle-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    flex-shrink: 0;
+  }
+
+  .team-toggle-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: scale(1.15) rotate(180deg);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+
+  .team-toggle-btn:active:not(:disabled) {
+    transform: scale(1.05) rotate(180deg);
+  }
+
+  .team-toggle-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #ccc;
+    box-shadow: none;
+  }
+
+  .team-indicator {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .team-indicator.white {
+    color: #333;
+  }
+
+  .team-indicator.black {
+    color: inherit;
+  }
+
+  .team-unassigned {
+    color: #dc3545;
+    font-style: italic;
+    font-size: 0.9rem;
+  }
+
   .player-icon {
-    font-size: 2.5rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
   }
 
   .player-avatar {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
   }
 
   .player-info {
