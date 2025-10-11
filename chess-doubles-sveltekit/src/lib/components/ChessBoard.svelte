@@ -2,7 +2,10 @@
   import { onMount } from "svelte";
   import { Chess } from "chess.js";
   import { Chessboard, INPUT_EVENT_TYPE } from "cm-chessboard";
-  import { Markers, MARKER_TYPE } from "cm-chessboard/src/extensions/markers/Markers.js";
+  import {
+    Markers,
+    MARKER_TYPE,
+  } from "cm-chessboard/src/extensions/markers/Markers.js";
   import "cm-chessboard/assets/chessboard.css";
   import "cm-chessboard/assets/extensions/markers/markers.css";
 
@@ -11,6 +14,8 @@
   export let fen: string;
   export let whitePlayer: { id: string; name: string };
   export let blackPlayer: { id: string; name: string };
+  export let whiteTeamMate: { id: string; name: string } | null;
+  export let blackTeamMate: { id: string; name: string } | null;
   export let currentTurnUserId: string;
   export let currentUserId: string;
   export let onMove: (
@@ -24,14 +29,23 @@
   let chess: Chess;
 
   $: isMyTurn = currentUserId === currentTurnUserId;
-  $: orientation = currentUserId === whitePlayer.id ? "white" : "black";
+  // Set orientation based on which color the current user is playing
 
   onMount(() => {
     chess = new Chess(fen);
 
+    console.log(currentUserId, whitePlayer.id, {
+      orientation:
+        currentUserId === whitePlayer.id || currentUserId === whiteTeamMate.id
+          ? "white"
+          : "black",
+    });
     board = new Chessboard(boardContainer, {
       position: fen,
-      orientation: orientation,
+      orientation:
+        currentUserId === whitePlayer.id || currentUserId === whiteTeamMate.id
+          ? "white"
+          : "black",
       sprite: {
         url: "https://cdn.jsdelivr.net/npm/cm-chessboard@8/assets/images/chessboard-sprite-staunty.svg",
       },
@@ -39,8 +53,8 @@
         cssClass: "chess-board default",
       },
       extensions: [
-        {class: Markers, props: {autoMarkers: MARKER_TYPE.square}}
-      ]
+        { class: Markers, props: { autoMarkers: MARKER_TYPE.square } },
+      ],
     });
 
     // Handle input events (when user tries to move)

@@ -1078,8 +1078,10 @@
       {#if gameBoards && gameBoards.length > 0}
         {@const sortedBoards = gameBoards.slice().sort((a, b) => {
           // Put the current user's board first
-          const aIsUserBoard = a.whitePlayerId === user?.id || a.blackPlayerId === user?.id;
-          const bIsUserBoard = b.whitePlayerId === user?.id || b.blackPlayerId === user?.id;
+          const aIsUserBoard =
+            a.whitePlayerId === user?.id || a.blackPlayerId === user?.id;
+          const bIsUserBoard =
+            b.whitePlayerId === user?.id || b.blackPlayerId === user?.id;
           if (aIsUserBoard && !bIsUserBoard) return -1;
           if (!aIsUserBoard && bIsUserBoard) return 1;
           return 0;
@@ -1092,12 +1094,16 @@
             {@const blackPlayer = gamePlayers.find(
               (p) => p.userId === board.blackPlayerId
             )}
-            {@const isUserBoard = board.whitePlayerId === user?.id || board.blackPlayerId === user?.id}
-            {@const boardTitle = isUserBoard ? "Your Board" : "Teammate's Board"}
+            {@const isUserBoard =
+              board.whitePlayerId === user?.id ||
+              board.blackPlayerId === user?.id}
+            {@const boardTitle = isUserBoard
+              ? "Your Board"
+              : "Teammate's Board"}
             {#if whitePlayer && blackPlayer}
               <ChessBoard
                 boardId={board.id}
-                boardTitle={boardTitle}
+                {boardTitle}
                 fen={board.fen}
                 whitePlayer={{
                   id: whitePlayer.userId,
@@ -1107,6 +1113,12 @@
                   id: blackPlayer.userId,
                   name: blackPlayer.user.name,
                 }}
+                whiteTeamMate={gamePlayers.find(
+                  (p) => p.team === "white" && p.userId !== whitePlayer.userId
+                )?.user ?? null}
+                blackTeamMate={gamePlayers.find(
+                  (p) => p.team === "black" && p.userId !== blackPlayer.userId
+                )?.user ?? null}
                 currentTurnUserId={board.currentTurnUserId}
                 currentUserId={user?.id || ""}
                 onMove={async (from, to, promotion) =>
