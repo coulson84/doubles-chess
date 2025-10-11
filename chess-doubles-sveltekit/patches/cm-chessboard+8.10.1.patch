@@ -1,0 +1,31 @@
+diff --git a/node_modules/cm-chessboard/README.md b/node_modules/cm-chessboard/README.md
+index f026db0..056ae60 100644
+--- a/node_modules/cm-chessboard/README.md
++++ b/node_modules/cm-chessboard/README.md
+@@ -123,6 +123,7 @@ this.props = {
+         cssClass: "default", // set the css theme of the board, try "green", "blue" or "chess-club"
+         showCoordinates: true, // show ranks and files
+         borderType: BORDER_TYPE.none, // "thin" thin border, "frame" wide border with coordinates in it, "none" no border
++        rs: 1,
+         aspectRatio: 1, // height/width of the board
+         pieces: {
+             type: PIECES_FILE_TYPE.svgSprite, // pieces are in an SVG sprite, no other type supported for now
+diff --git a/node_modules/cm-chessboard/package.json b/node_modules/cm-chessboard/package.json
+index 542e469..6eda1a3 100644
+--- a/node_modules/cm-chessboard/package.json
++++ b/node_modules/cm-chessboard/package.json
+@@ -15,6 +15,14 @@
+   "type": "module",
+   "module": "./src/Chessboard.js",
+   "browser": "./src/Chessboard.js",
++  "exports": {
++    ".": {
++      "import": "./src/Chessboard.js",
++      "default": "./src/Chessboard.js"
++    },
++    "./*": ["./*" ],
++    "./package.json": "./package.json"
++  },
+   "scripts": {
+     "test": "tput setaf 4;echo 'Run test/index.html in your browser for unit testing.'; echo ''; exit 0"
+   },
