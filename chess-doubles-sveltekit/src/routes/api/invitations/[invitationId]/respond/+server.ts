@@ -6,8 +6,9 @@ import type { GameInviteResponsePayload } from '$lib/websocket/types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const session = await locals.auth();
+	const userId = session?.user?.id;
 
-	if (!session?.user?.id) {
+	if (!userId) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
@@ -29,7 +30,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		}
 
 		// Verify the user is the invited user
-		if (invitation.invitedUserId !== session.user.id) {
+		if (invitation.invitedUserId !== userId) {
 			return json({ error: 'Not authorized to respond to this invitation' }, { status: 403 });
 		}
 
@@ -95,7 +96,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 				// Add player to game_players table
 				await trx('game_players').insert({
 					gameId: invitation.gameId,
-					userId: session.user.id,
+					userId,
 					team: assignedTeam,
 					isCreator: false
 				});
@@ -131,8 +132,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		const wsPayload: GameInviteResponsePayload = {
 			gameId: invitation.gameId,
 			invitationId,
-			userId: session.user.id,
-			userName: session.user.name || 'Someone',
+			userId,
+			userName: session.user?.name || 'Someone',
 			status: status as 'accepted' | 'declined'
 		};
 

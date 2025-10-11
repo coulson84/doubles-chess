@@ -7,7 +7,8 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 	const session = await locals.auth();
 	const { gameId } = params;
 
-	if (!session?.user?.id) {
+	const userId = session?.user?.id;
+	if (!userId) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
@@ -28,14 +29,14 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 		}
 
 		// Check if user is the creator
-		if (game.createdBy === session.user.id) {
+		if (game.createdBy === userId) {
 			return json({ error: 'You cannot join your own game' }, { status: 400 });
 		}
 
 		await knex.transaction(async (trx) => {
 			// Check if user already has an invitation
 			const inTheGame = await trx('game_players')
-				.where({ gameId, userId: session.user.id })
+				.where({ gameId, userId })
 				.first();
 
 			if (inTheGame) {
@@ -43,7 +44,7 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			}
 
 			const existingInvite = await trx('game_invitations')
-				.where({ gameId, invitedUserId: session.user.id })
+				.where({ gameId, invitedUserId: userId })
 				.first();
 
 			if (existingInvite) {
@@ -74,7 +75,7 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 
 					// Update existing invitation to accepted
 					await trx('game_invitations')
-						.where({ gameId, invitedUserId: session.user.id })
+						.where({ gameId, invitedUserId: userId })
 						.update({
 							status: 'accepted',
 							respondedAt: trx.fn.now(),
@@ -83,7 +84,7 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 					// Add player to game_players table
 					await trx('game_players').insert({
 						gameId,
-						userId: session.user.id,
+						userId: userId,
 						team: assignedTeam,
 						isCreator: false
 					});
@@ -124,12 +125,12 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			await trx('game_invitations').update({
 				status: 'accepted',
 				respondedAt: trx.fn.now(),
-			}).where({ gameId, invitedUserId: session.user.id });
+			}).where({ gameId, invitedUserId: userId });
 
 			// Add player to game_players table
 			await trx('game_players').insert({
 				gameId,
-				userId: session.user.id,
+				userId: userId,
 				team: assignedTeam,
 				isCreator: false
 			});
@@ -145,8 +146,8 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 			type: 'game_invite_accepted',
 			payload: {
 				gameId,
-				userId: session.user.id,
-				userName: session.user.name || 'Unknown User'
+				userId: userId,
+				userName: session.user?.name || 'Unknown User'
 			}
 		});
 
