@@ -35,7 +35,7 @@
         url: "https://cdn.jsdelivr.net/npm/cm-chessboard@8/assets/images/chessboard-sprite-staunty.svg",
       },
       style: {
-        cssClass: "chess-board",
+        cssClass: "chess-board default",
       },
     });
 
