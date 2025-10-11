@@ -85,6 +85,18 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 					assignedTeam = Math.random() < 0.5 ? 'white' : 'black';
 				}
 
+				// Determine the next available position for this team
+				const existingPositions = await trx('game_players')
+					.where({ gameId: invitation.gameId, team: assignedTeam })
+					.whereNotNull('playerPosition')
+					.pluck('playerPosition');
+
+				// Find first available position (1 or 2)
+				let playerPosition = 1;
+				if (existingPositions.includes(1)) {
+					playerPosition = 2;
+				}
+
 				// Update invitation status with team assignment
 				await trx('game_invitations')
 					.where({ id: invitationId })
@@ -98,6 +110,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 					gameId: invitation.gameId,
 					userId,
 					team: assignedTeam,
+					playerPosition,
 					isCreator: false
 				});
 			} else {

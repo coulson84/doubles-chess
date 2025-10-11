@@ -76,12 +76,14 @@ The app includes a comprehensive web push notification system for real-time user
 #### Architecture
 
 1. **Service Worker** (`src/service-worker.js`):
+
    - Handles push events from the server
    - Displays notifications to users
    - Manages notification clicks and navigation
    - Auto-registered by SvelteKit in production builds
 
 2. **Push Subscription Management**:
+
    - Users can subscribe/unsubscribe to notifications
    - Subscriptions stored in `push_subscriptions` table
    - Automatic cleanup of expired subscriptions
@@ -97,16 +99,19 @@ The app includes a comprehensive web push notification system for real-time user
 #### Implementation
 
 **Server-Side** (`src/lib/notifications/`):
+
 - `push.server.ts` - Core push notification sending logic with VAPID
 - `game-notifications.server.ts` - Game-specific notification helpers
 - `types.ts` - TypeScript definitions for notifications
 
 **Client-Side**:
+
 - `client.ts` - Browser notification permission and subscription
 - `NotificationPrompt.svelte` - Dismissable popup for permission (production only)
 - Automatic service worker registration in production
 
 **API Endpoints**:
+
 - `POST /api/notifications/subscribe` - Subscribe to push notifications
 - `DELETE /api/notifications/subscribe` - Unsubscribe from notifications
 - `GET /api/notifications/vapid-public-key` - Get public VAPID key
@@ -114,25 +119,28 @@ The app includes a comprehensive web push notification system for real-time user
 #### Usage Examples
 
 **Send game invitation notification:**
+
 ```typescript
-import { notifyGameInvite } from '$lib/notifications/game-notifications.server';
+import { notifyGameInvite } from "$lib/notifications/game-notifications.server";
 
 await notifyGameInvite(gameId, invitedUserId, inviterName);
 ```
 
 **Send move notification:**
+
 ```typescript
-import { notifyGameMove } from '$lib/notifications/game-notifications.server';
+import { notifyGameMove } from "$lib/notifications/game-notifications.server";
 
 await notifyGameMove(gameId, [player1Id, player2Id], movedByName);
 ```
 
 **Invite user to game (includes notification):**
+
 ```typescript
 const response = await fetch(`/api/games/${gameId}/invite`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ userId: invitedUserId })
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ userId: invitedUserId }),
 });
 ```
 
@@ -161,12 +169,14 @@ The app includes a comprehensive email system for user notifications and verific
 #### Architecture
 
 1. **Email Service** (`src/lib/email/mailer.server.ts`):
+
    - Uses nodemailer for sending emails
    - Automatically uses MailDev in development
    - Production-ready with SMTP configuration
    - Verifies connection on startup
 
 2. **Email Templates** (`src/lib/email/templates.ts`):
+
    - Branded HTML templates with inline styles
    - Plain text fallbacks for all emails
    - Signup confirmation emails
@@ -190,25 +200,27 @@ The app includes a comprehensive email system for user notifications and verific
 #### Implementation
 
 **Server-Side Sending**:
+
 ```typescript
-import { sendEmail } from '$lib/email/mailer.server';
-import { signupConfirmationEmail } from '$lib/email/templates';
+import { sendEmail } from "$lib/email/mailer.server";
+import { signupConfirmationEmail } from "$lib/email/templates";
 
 const emailContent = signupConfirmationEmail({
   name: user.name,
   email: user.email,
-  verificationUrl: 'https://example.com/verify?token=...'
+  verificationUrl: "https://example.com/verify?token=...",
 });
 
 await sendEmail({
   to: user.email,
   subject: emailContent.subject,
   html: emailContent.html,
-  text: emailContent.text
+  text: emailContent.text,
 });
 ```
 
 **Email Verification Flow**:
+
 1. User signs up with email/password
 2. Verification token created in `verification_tokens` table (24hr expiry)
 3. Confirmation email sent with verification link
@@ -217,16 +229,19 @@ await sendEmail({
 6. User's `emailVerified` field updated
 
 **API Endpoints**:
+
 - `POST /api/auth/signup` - Create account and send verification email
 - `GET /auth/verify-email?token=...` - Verify email address
 
 #### Environment Variables
 
 **Development (MailDev - Auto-configured)**:
+
 - No SMTP configuration needed
 - Emails viewable at http://localhost:1080
 
 **Production**:
+
 - `SMTP_HOST` - SMTP server hostname (e.g., smtp.gmail.com)
 - `SMTP_PORT` - SMTP server port (usually 587 or 465)
 - `SMTP_SECURE` - Use TLS/SSL (true/false)
@@ -237,12 +252,13 @@ await sendEmail({
 #### Docker Setup
 
 MailDev is configured in `docker-compose.yaml`:
+
 ```yaml
 maildev:
   image: maildev/maildev
   ports:
-    - "1080:1080"  # Web UI
-    - "1025:1025"  # SMTP server
+    - "1080:1080" # Web UI
+    - "1025:1025" # SMTP server
 ```
 
 Start with: `docker-compose up -d`
@@ -263,6 +279,7 @@ Start with: `docker-compose up -d`
    - Responsive design with chess-themed imagery
 
 2. **Sign In/Sign Up Page** (`/auth`):
+
    - Tabbed interface for Sign In and Sign Up
    - **Email/Password Authentication**:
      - Sign up with email, password (min 8 chars), and name
@@ -345,6 +362,8 @@ npm run check:watch
 ```
 
 ### Database Management
+
+These commands should be run from from the chess-doubles-sveltekit directory
 
 ```bash
 # Run migrations (create/update database schema)

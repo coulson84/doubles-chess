@@ -446,33 +446,6 @@
     }
   }
 
-  // Assign team (creator only)
-  let assigningTeam: string | null = null;
-
-  async function assignTeam(userId: string, team: "white" | "black") {
-    assigningTeam = userId;
-
-    try {
-      const response = await fetch(`/api/games/${game.id}/assign-team`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, team }),
-      });
-
-      if (response.ok) {
-        await invalidateAll();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Failed to assign team");
-      }
-    } catch (error) {
-      console.error("Error assigning team:", error);
-      alert("An error occurred while assigning the team");
-    } finally {
-      assigningTeam = null;
-    }
-  }
-
   // Handle chess moves
   async function handleMove(
     boardId: string,
@@ -577,38 +550,36 @@
     // Remove placeholder class from original
     card.classList.remove("drag-placeholder");
 
-    // Find if we dropped on another player card
-    const targetCard = elementBelow?.closest(".player-slot") as HTMLElement;
-    const targetUserId = targetCard?.dataset.userId;
+    // Find if we dropped on a position slot
+    const targetSlot = elementBelow?.closest(".position-slot") as HTMLElement;
 
-    if (targetUserId && targetUserId !== draggedUserId) {
-      // Swap teams
-      try {
-        const response = await fetch(`/api/games/${game.id}/swap-teams`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            draggedUserId,
-            targetUserId,
-          }),
-        });
+    if (targetSlot) {
+      const targetTeam = targetSlot.dataset.team;
+      const targetPosition = parseInt(targetSlot.dataset.position || "0");
 
-        if (response.ok) {
-          await invalidateAll();
-        } else {
-          const error = await response.json();
-          alert(error.error || "Failed to swap teams");
+      if (targetTeam && targetPosition) {
+        try {
+          const response = await fetch(`/api/games/${game.id}/change-team`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              draggedUserId,
+              targetTeam,
+              targetPosition,
+            }),
+          });
+
+          if (response.ok) {
+            await invalidateAll();
+          } else {
+            const error = await response.json();
+            alert(error.error || "Failed to change team");
+          }
+        } catch (error) {
+          console.error("Error changing team:", error);
+          alert("An error occurred while changing team");
         }
-      } catch (error) {
-        console.error("Error swapping teams:", error);
-        alert("An error occurred while swapping teams");
       }
-    } else if (elementBelow?.closest(".team-white")) {
-      // Assign to white team
-      await assignTeam(draggedUserId, "white");
-    } else if (elementBelow?.closest(".team-black")) {
-      // Assign to black team
-      await assignTeam(draggedUserId, "black");
     }
 
     // Reset state
@@ -775,64 +746,75 @@
             <div class="team-section white-team">
               <h3 class="team-title">⚪ White Team</h3>
               <div class="team-players">
-                {#each gamePlayers.filter((player) => player.team === "white") as player}
+                {#each [1, 2] as position}
+                  {@const player = gamePlayers.find(
+                    (p) => p.team === "white" && p.playerPosition === position
+                  )}
                   <div
-                    class="player-slot filled team-white {isCreator
-                      ? 'draggable'
-                      : ''}"
-                    data-user-id={player.userId}
+                    class="position-slot {player
+                      ? 'filled'
+                      : 'empty'} team-white"
+                    data-team="white"
+                    data-position={position}
                   >
-                    <div
-                      class="player-main"
-                      on:pointerdown={(e) =>
-                        isCreator && handlePointerDown(e, player.userId)}
-                      on:pointermove={handlePointerMove}
-                      on:pointerup={handlePointerUp}
-                      on:pointercancel={handlePointerUp}
-                    >
-                      {#if player.user.image}
-                        <img
-                          src={player.user.image}
-                          alt={player.user.name}
-                          class="player-avatar"
-                        />
-                      {:else}
-                        <div class="player-icon">
-                          {player.user.name?.charAt(0) || "?"}
-                        </div>
-                      {/if}
-                      <div class="player-info">
-                        <div class="player-name">
-                          {player.userId === user?.id
-                            ? "You"
-                            : player.user.name}
-                          {#if player.isCreator}
-                            <span class="creator-badge">Creator</span>
+                    <div class="position-label">Player {position}</div>
+                    {#if player}
+                      <div
+                        class="player-slot filled team-white {isCreator
+                          ? 'draggable'
+                          : ''}"
+                        data-user-id={player.userId}
+                      >
+                        <div
+                          class="player-main"
+                          on:pointerdown={(e) =>
+                            isCreator && handlePointerDown(e, player.userId)}
+                          on:pointermove={handlePointerMove}
+                          on:pointerup={handlePointerUp}
+                          on:pointercancel={handlePointerUp}
+                        >
+                          {#if player.user.image}
+                            <img
+                              src={player.user.image}
+                              alt={player.user.name}
+                              class="player-avatar"
+                            />
+                          {:else}
+                            <div class="player-icon">
+                              {player.user.name?.charAt(0) || "?"}
+                            </div>
                           {/if}
+                          <div class="player-info">
+                            <div class="player-name">
+                              {player.userId === user?.id
+                                ? "You"
+                                : player.user.name}
+                              {#if player.isCreator}
+                                <span class="creator-badge">Creator</span>
+                              {/if}
+                            </div>
+                          </div>
+                        </div>
+                        {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
+                          <button
+                            class="eject-btn"
+                            on:click={() =>
+                              ejectPlayer(player.userId, player.user.name)}
+                            disabled={ejectingPlayerId === player.userId}
+                            title="Eject player"
+                          >
+                            {ejectingPlayerId === player.userId ? "..." : "✕"}
+                          </button>
+                        {/if}
+                      </div>
+                    {:else}
+                      <div class="player-slot empty team-white">
+                        <div class="player-icon">⭕</div>
+                        <div class="player-info">
+                          <div class="player-name">Waiting for player...</div>
                         </div>
                       </div>
-                    </div>
-                    {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
-                      <button
-                        class="eject-btn"
-                        on:click={() =>
-                          ejectPlayer(player.userId, player.user.name)}
-                        disabled={ejectingPlayerId === player.userId}
-                        title="Eject player"
-                      >
-                        {ejectingPlayerId === player.userId ? "..." : "✕"}
-                      </button>
                     {/if}
-                  </div>
-                {/each}
-
-                <!-- Empty white slots -->
-                {#each Array(Math.max(0, 2 - gamePlayers.filter((p) => p.team === "white").length)) as _, i}
-                  <div class="player-slot empty team-white">
-                    <div class="player-icon">⭕</div>
-                    <div class="player-info">
-                      <div class="player-name">Waiting for player...</div>
-                    </div>
                   </div>
                 {/each}
               </div>
@@ -847,64 +829,75 @@
             <div class="team-section black-team">
               <h3 class="team-title">⚫ Black Team</h3>
               <div class="team-players">
-                {#each gamePlayers.filter((player) => player.team === "black") as player}
+                {#each [1, 2] as position}
+                  {@const player = gamePlayers.find(
+                    (p) => p.team === "black" && p.playerPosition === position
+                  )}
                   <div
-                    class="player-slot filled team-black {isCreator
-                      ? 'draggable'
-                      : ''}"
-                    data-user-id={player.userId}
+                    class="position-slot {player
+                      ? 'filled'
+                      : 'empty'} team-black"
+                    data-team="black"
+                    data-position={position}
                   >
-                    <div
-                      class="player-main"
-                      on:pointerdown={(e) =>
-                        isCreator && handlePointerDown(e, player.userId)}
-                      on:pointermove={handlePointerMove}
-                      on:pointerup={handlePointerUp}
-                      on:pointercancel={handlePointerUp}
-                    >
-                      {#if player.user.image}
-                        <img
-                          src={player.user.image}
-                          alt={player.user.name}
-                          class="player-avatar"
-                        />
-                      {:else}
-                        <div class="player-icon">
-                          {player.user.name?.charAt(0) || "?"}
-                        </div>
-                      {/if}
-                      <div class="player-info">
-                        <div class="player-name">
-                          {player.userId === user?.id
-                            ? "You"
-                            : player.user.name}
-                          {#if player.isCreator}
-                            <span class="creator-badge">Creator</span>
+                    <div class="position-label">Player {position}</div>
+                    {#if player}
+                      <div
+                        class="player-slot filled team-black {isCreator
+                          ? 'draggable'
+                          : ''}"
+                        data-user-id={player.userId}
+                      >
+                        <div
+                          class="player-main"
+                          on:pointerdown={(e) =>
+                            isCreator && handlePointerDown(e, player.userId)}
+                          on:pointermove={handlePointerMove}
+                          on:pointerup={handlePointerUp}
+                          on:pointercancel={handlePointerUp}
+                        >
+                          {#if player.user.image}
+                            <img
+                              src={player.user.image}
+                              alt={player.user.name}
+                              class="player-avatar"
+                            />
+                          {:else}
+                            <div class="player-icon">
+                              {player.user.name?.charAt(0) || "?"}
+                            </div>
                           {/if}
+                          <div class="player-info">
+                            <div class="player-name">
+                              {player.userId === user?.id
+                                ? "You"
+                                : player.user.name}
+                              {#if player.isCreator}
+                                <span class="creator-badge">Creator</span>
+                              {/if}
+                            </div>
+                          </div>
+                        </div>
+                        {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
+                          <button
+                            class="eject-btn"
+                            on:click={() =>
+                              ejectPlayer(player.userId, player.user.name)}
+                            disabled={ejectingPlayerId === player.userId}
+                            title="Eject player"
+                          >
+                            {ejectingPlayerId === player.userId ? "..." : "✕"}
+                          </button>
+                        {/if}
+                      </div>
+                    {:else}
+                      <div class="player-slot empty team-black">
+                        <div class="player-icon">⭕</div>
+                        <div class="player-info">
+                          <div class="player-name">Waiting for player...</div>
                         </div>
                       </div>
-                    </div>
-                    {#if isCreator && !player.isCreator && game.status !== "inProgress" && game.status !== "complete"}
-                      <button
-                        class="eject-btn"
-                        on:click={() =>
-                          ejectPlayer(player.userId, player.user.name)}
-                        disabled={ejectingPlayerId === player.userId}
-                        title="Eject player"
-                      >
-                        {ejectingPlayerId === player.userId ? "..." : "✕"}
-                      </button>
                     {/if}
-                  </div>
-                {/each}
-
-                <!-- Empty black slots -->
-                {#each Array(Math.max(0, 2 - gamePlayers.filter((p) => p.team === "black").length)) as _, i}
-                  <div class="player-slot empty team-black">
-                    <div class="player-icon">⭕</div>
-                    <div class="player-info">
-                      <div class="player-name">Waiting for player...</div>
-                    </div>
                   </div>
                 {/each}
               </div>
@@ -1507,7 +1500,7 @@
     grid-template-columns: 1fr auto 1fr;
     gap: 2rem;
     margin-top: 1.5rem;
-    align-items: start;
+    align-items: middle;
   }
 
   .team-section {
@@ -1603,11 +1596,48 @@
     flex-shrink: 0;
   }
 
-  .player-slot {
+  .position-slot {
     background: #f8f9fa;
     border: 2px dashed #d0d0d0;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1rem;
+    transition: all 0.3s;
+    position: relative;
+    min-height: 100px;
+  }
+
+  .position-slot.team-white {
+    background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+    border: 2px dashed #999;
+  }
+
+  .position-slot.team-black {
+    background: linear-gradient(135deg, #5a5a5a 0%, #3a3a3a 100%);
+    border: 2px dashed #bbb;
+  }
+
+  .position-slot.filled {
+    border-style: solid;
+  }
+
+  .position-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    color: #666;
+  }
+
+  .position-slot.team-black .position-label {
+    color: #ccc;
+  }
+
+  .player-slot {
+    background: #f8f9fa;
+    border: 2px dashed #d0d0d0;
+    border-radius: 8px;
+    padding: 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;

@@ -65,6 +65,7 @@ export const load: PageServerLoad = async (event) => {
 				'game_players.gameId',
 				'game_players.userId',
 				'game_players.team',
+				'game_players.playerPosition',
 				'game_players.isCreator',
 				'game_players.joinedAt',
 				'users.id as user_id',
@@ -122,6 +123,7 @@ export const load: PageServerLoad = async (event) => {
 			gameId: player.gameId,
 			userId: player.userId,
 			team: player.team,
+			playerPosition: player.playerPosition,
 			isCreator: player.isCreator,
 			joinedAt: player.joinedAt,
 			user: {

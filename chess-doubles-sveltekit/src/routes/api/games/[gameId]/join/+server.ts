@@ -73,6 +73,18 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 						assignedTeam = Math.random() < 0.5 ? 'white' : 'black';
 					}
 
+					// Determine the next available position for this team
+					const existingPositions = await trx('game_players')
+						.where({ gameId, team: assignedTeam })
+						.whereNotNull('playerPosition')
+						.pluck('playerPosition');
+
+					// Find first available position (1 or 2)
+					let playerPosition = 1;
+					if (existingPositions.includes(1)) {
+						playerPosition = 2;
+					}
+
 					// Update existing invitation to accepted
 					await trx('game_invitations')
 						.where({ gameId, invitedUserId: userId })
@@ -86,6 +98,7 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 						gameId,
 						userId: userId,
 						team: assignedTeam,
+						playerPosition,
 						isCreator: false
 					});
 
@@ -121,6 +134,18 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 				assignedTeam = Math.random() < 0.5 ? 'white' : 'black';
 			}
 
+			// Determine the next available position for this team
+			const existingPositions = await trx('game_players')
+				.where({ gameId, team: assignedTeam })
+				.whereNotNull('playerPosition')
+				.pluck('playerPosition');
+
+			// Find first available position (1 or 2)
+			let playerPosition = 1;
+			if (existingPositions.includes(1)) {
+				playerPosition = 2;
+			}
+
 			// Create a new accepted invitation
 			await trx('game_invitations').update({
 				status: 'accepted',
@@ -132,6 +157,7 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 				gameId,
 				userId: userId,
 				team: assignedTeam,
+				playerPosition,
 				isCreator: false
 			});
 

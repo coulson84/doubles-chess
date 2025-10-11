@@ -48,6 +48,23 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 			return json({ error: 'Each team must have exactly 2 players' }, { status: 400 });
 		}
 
+		// Sort players by position to ensure deterministic board assignment
+		whitePlayers.sort((a, b) => (a.playerPosition || 99) - (b.playerPosition || 99));
+		blackPlayers.sort((a, b) => (a.playerPosition || 99) - (b.playerPosition || 99));
+
+		// Find white and black player 1 (position 1)
+		const whitePlayer1 = whitePlayers.find(p => p.playerPosition === 1);
+		const blackPlayer1 = blackPlayers.find(p => p.playerPosition === 1);
+
+		// Find white and black player 2 (position 2)
+		const whitePlayer2 = whitePlayers.find(p => p.playerPosition === 2);
+		const blackPlayer2 = blackPlayers.find(p => p.playerPosition === 2);
+
+		// Verify all positions are assigned
+		if (!whitePlayer1 || !blackPlayer1 || !whitePlayer2 || !blackPlayer2) {
+			return json({ error: 'All players must have positions (1 or 2) assigned before starting' }, { status: 400 });
+		}
+
 		// Update game status and create boards in a transaction
 		await db.transaction(async (trx) => {
 			// Update game status to in progress
@@ -56,25 +73,25 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 				updatedAt: trx.fn.now()
 			});
 
-			// Create two boards with player pairings
-			// Board 1: White[0] vs Black[0]
+			// Create two boards with deterministic player pairings
+			// Board 1: White Player 1 vs Black Player 1
 			await trx('game_boards').insert({
 				gameId,
 				boardNumber: 1,
-				whitePlayerId: whitePlayers[0].userId,
-				blackPlayerId: blackPlayers[0].userId,
-				currentTurnUserId: whitePlayers[0].userId, // White starts
+				whitePlayerId: whitePlayer1.userId,
+				blackPlayerId: blackPlayer1.userId,
+				currentTurnUserId: whitePlayer1.userId, // White starts
 				fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
 				moveHistory: []
 			});
 
-			// Board 2: White[1] vs Black[1]
+			// Board 2: White Player 2 vs Black Player 2
 			await trx('game_boards').insert({
 				gameId,
 				boardNumber: 2,
-				whitePlayerId: whitePlayers[1].userId,
-				blackPlayerId: blackPlayers[1].userId,
-				currentTurnUserId: whitePlayers[1].userId, // White starts
+				whitePlayerId: whitePlayer2.userId,
+				blackPlayerId: blackPlayer2.userId,
+				currentTurnUserId: whitePlayer2.userId, // White starts
 				fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
 				moveHistory: []
 			});

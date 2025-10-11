@@ -62,14 +62,15 @@ export const POST: RequestHandler = async ({ locals, request }) => {
         })
         .returning('*');
 
-      // Randomly assign creator to a team
+      // Randomly assign creator to a team and position 1
       const creatorTeam = Math.random() < 0.5 ? 'white' : 'black';
 
-      // Add creator to game_players
+      // Add creator to game_players with position 1
       await trx('game_players').insert({
         gameId: newGame.id,
         userId: session.user.id,
         team: creatorTeam,
+        playerPosition: 1,
         isCreator: true
       });
 
