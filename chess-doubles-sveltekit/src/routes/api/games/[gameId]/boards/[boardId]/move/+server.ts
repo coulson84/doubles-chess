@@ -60,7 +60,7 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 			.where({ id: boardId })
 			.update({
 				fen: chess.fen(),
-				moveHistory: knex.raw('move_history || ?', [JSON.stringify([move])]),
+				moveHistory: knex.raw('"moveHistory" || ?', [JSON.stringify([move])]),
 				currentTurnUserId: nextPlayerId,
 				lastMoveAt: knex.fn.now(),
 				updatedAt: knex.fn.now()

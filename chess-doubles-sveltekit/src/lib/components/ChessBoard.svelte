@@ -2,8 +2,9 @@
   import { onMount } from "svelte";
   import { Chess } from "chess.js";
   import { Chessboard, INPUT_EVENT_TYPE } from "cm-chessboard";
-  import { MARKER_TYPE } from "cm-chessboard/src/extensions/markers/Markers.js";
+  import { Markers, MARKER_TYPE } from "cm-chessboard/src/extensions/markers/Markers.js";
   import "cm-chessboard/assets/chessboard.css";
+  import "cm-chessboard/assets/extensions/markers/markers.css";
 
   export let boardId: string;
   export let boardNumber: number;
@@ -37,6 +38,9 @@
       style: {
         cssClass: "chess-board default",
       },
+      extensions: [
+        {class: Markers, props: {autoMarkers: MARKER_TYPE.square}}
+      ]
     });
 
     // Handle input events (when user tries to move)
