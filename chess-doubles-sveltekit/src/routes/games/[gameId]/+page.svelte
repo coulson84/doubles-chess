@@ -617,62 +617,6 @@
       </div>
 
       <div class="lobby-content">
-        <div class="game-info-card">
-          <div class="card-header">
-            <h2>Game Information</h2>
-            {#if isCreator && (game.status === "awaitingPlayers" || game.status === "readyToStart")}
-              <button
-                class="settings-btn"
-                on:click={openSettingsModal}
-                title="Game Settings"
-              >
-                ⚙️
-              </button>
-            {/if}
-          </div>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">Game ID:</span>
-              <span class="value mono">{game.id}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Created:</span>
-              <span class="value">{formatDate(game.createdAt)}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Last Updated:</span>
-              <span class="value">{formatDate(game.updatedAt)}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Your Role:</span>
-              <span class="value">{isCreator ? "Game Creator" : "Player"}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Visibility:</span>
-              <span class="value">{game?.isPrivate ? "Private" : "Public"}</span
-              >
-            </div>
-            <div class="info-item">
-              <span class="label">Time Per Move:</span>
-              <span class="value"
-                >{game?.timeLimitPerMove
-                  ? `${game.timeLimitPerMove}s`
-                  : "No limit"}</span
-              >
-            </div>
-            <div class="info-item">
-              <span class="label">Rated:</span>
-              <span class="value">{game?.isRated ? "Yes" : "No"}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Team Assignment:</span>
-              <span class="value"
-                >{game?.teamAssignment === "manual" ? "Manual" : "Random"}</span
-              >
-            </div>
-          </div>
-        </div>
-
         <div class="players-section">
           <div class="players-header">
             <h2>Players</h2>
@@ -965,6 +909,62 @@
               </div>
             </div>
           {/if}
+        </div>
+
+        <div class="game-info-card">
+          <div class="card-header">
+            <h2>Game Information</h2>
+            {#if isCreator && (game.status === "awaitingPlayers" || game.status === "readyToStart")}
+              <button
+                class="settings-btn"
+                on:click={openSettingsModal}
+                title="Game Settings"
+              >
+                ⚙️
+              </button>
+            {/if}
+          </div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Game ID:</span>
+              <span class="value mono">{game.id}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Created:</span>
+              <span class="value">{formatDate(game.createdAt)}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Last Updated:</span>
+              <span class="value">{formatDate(game.updatedAt)}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Your Role:</span>
+              <span class="value">{isCreator ? "Game Creator" : "Player"}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Visibility:</span>
+              <span class="value">{game?.isPrivate ? "Private" : "Public"}</span
+              >
+            </div>
+            <div class="info-item">
+              <span class="label">Time Per Move:</span>
+              <span class="value"
+                >{game?.timeLimitPerMove
+                  ? `${game.timeLimitPerMove}s`
+                  : "No limit"}</span
+              >
+            </div>
+            <div class="info-item">
+              <span class="label">Rated:</span>
+              <span class="value">{game?.isRated ? "Yes" : "No"}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Team Assignment:</span>
+              <span class="value"
+                >{game?.teamAssignment === "manual" ? "Manual" : "Random"}</span
+              >
+            </div>
+          </div>
         </div>
 
         <div class="lobby-actions">
