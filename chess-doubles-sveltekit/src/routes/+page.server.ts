@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import knex from '../db.server';
+import knex from '$lib/db.server';
 
 type Game = {
 	id: string;

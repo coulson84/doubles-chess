@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import knex from '../../../../../db.server';
+import knex from '$lib/db.server';
 
 export const POST: RequestHandler = async ({ locals, params, request }) => {
 	const session = await locals.auth();

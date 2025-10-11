@@ -1,4 +1,4 @@
-import knex from './db.server.js';
+import knex from '$lib/db.server.js';
 
 async function updateGame() {
   try {

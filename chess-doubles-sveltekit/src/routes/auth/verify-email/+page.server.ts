@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import knex from '../../../db.server';
+import knex from '$lib/db.server';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const token = url.searchParams.get('token');

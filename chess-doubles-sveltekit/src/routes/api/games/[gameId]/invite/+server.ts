@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import db from '$lib/../db.server';
+import db from '$lib/db.server';
 import { notifyGameInvite } from '$lib/notifications/game-notifications.server';
 import { sendToUser } from '$lib/websocket/server';
 import type { GameInviteReceivedPayload } from '$lib/websocket/types';

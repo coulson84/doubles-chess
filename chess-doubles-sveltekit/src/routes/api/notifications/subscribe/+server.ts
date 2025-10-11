@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import db from '$lib/../db.server';
+import db from '$lib/db.server';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	const session = await locals.auth();

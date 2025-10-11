@@ -1,4 +1,4 @@
-import db from '$lib/../db.server';
+import db from '$lib/db.server';
 import { sendPushNotificationToMultiple } from './push.server';
 import type { ChessNotification } from './types';
 
