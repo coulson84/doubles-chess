@@ -7,7 +7,7 @@
   import "cm-chessboard/assets/extensions/markers/markers.css";
 
   export let boardId: string;
-  export let boardNumber: number;
+  export let boardTitle: string;
   export let fen: string;
   export let whitePlayer: { id: string; name: string };
   export let blackPlayer: { id: string; name: string };
@@ -123,7 +123,7 @@
 
 <div class="chess-board-wrapper">
   <div class="board-header">
-    <div class="board-title">Board {boardNumber}</div>
+    <div class="board-title">{boardTitle}</div>
     <div class="players">
       <div class="player white-player">
         <span class="player-icon">⚪</span>

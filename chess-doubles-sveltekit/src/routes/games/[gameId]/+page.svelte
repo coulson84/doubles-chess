@@ -1076,18 +1076,28 @@
       </div>
 
       {#if gameBoards && gameBoards.length > 0}
+        {@const sortedBoards = gameBoards.slice().sort((a, b) => {
+          // Put the current user's board first
+          const aIsUserBoard = a.whitePlayerId === user?.id || a.blackPlayerId === user?.id;
+          const bIsUserBoard = b.whitePlayerId === user?.id || b.blackPlayerId === user?.id;
+          if (aIsUserBoard && !bIsUserBoard) return -1;
+          if (!aIsUserBoard && bIsUserBoard) return 1;
+          return 0;
+        })}
         <div class="boards-container">
-          {#each gameBoards as board}
+          {#each sortedBoards as board, index}
             {@const whitePlayer = gamePlayers.find(
               (p) => p.userId === board.whitePlayerId
             )}
             {@const blackPlayer = gamePlayers.find(
               (p) => p.userId === board.blackPlayerId
             )}
+            {@const isUserBoard = board.whitePlayerId === user?.id || board.blackPlayerId === user?.id}
+            {@const boardTitle = isUserBoard ? "Your Board" : "Teammate's Board"}
             {#if whitePlayer && blackPlayer}
               <ChessBoard
                 boardId={board.id}
-                boardNumber={board.boardNumber}
+                boardTitle={boardTitle}
                 fen={board.fen}
                 whitePlayer={{
                   id: whitePlayer.userId,
