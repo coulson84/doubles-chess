@@ -467,7 +467,14 @@
         await invalidateAll();
       } else {
         const error = await response.json();
-        alert(error.error || "Invalid move");
+        if (error.waitingForOtherBoard) {
+          // Show a more friendly message for the waiting state
+          alert(
+            `⏳ ${error.error}\n\nThis prevents one board from getting too far ahead.`
+          );
+        } else {
+          alert(error.error || "Invalid move");
+        }
       }
     } catch (error) {
       console.error("Error making move:", error);

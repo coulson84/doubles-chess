@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import knex from '$lib/db.server';
 import { Chess } from 'chess.js';
 import { sendToUser } from '../../../../../../../lib/websocket/server';
+import { clamp } from 'ramda';
 
 export const POST: RequestHandler = async ({ locals, params, request }) => {
 	const session = await locals.auth();
@@ -36,6 +37,46 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 		// Verify the player is on this board
 		if (board.whitePlayerId !== session.user.id && board.blackPlayerId !== session.user.id) {
 			return json({ error: 'You are not playing on this board' }, { status: 403 });
+		}
+
+		// Check move differential limit (20% rule)
+		// Get the other board in this game
+		const allBoards = await knex('game_boards')
+			.where({ gameId })
+			.select('id', 'moveHistory');
+
+		if (allBoards.length === 2) {
+			const currentBoard = allBoards.find(b => b.id === boardId);
+			const otherBoard = allBoards.find(b => b.id !== boardId);
+
+			if (currentBoard && otherBoard) {
+				const currentMoveCount = Array.isArray(currentBoard.moveHistory)
+					? currentBoard.moveHistory.length
+					: 0;
+				const otherMoveCount = Array.isArray(otherBoard.moveHistory)
+					? otherBoard.moveHistory.length
+					: 0;
+
+				// Calculate the minimum move count (the board with fewer moves)
+				const minMoveCount = Math.min(currentMoveCount, otherMoveCount);
+
+				// Calculate max allowed difference:
+				// - Minimum of 4 moves for early game (0-24 moves)
+				// - After 24 moves, use 20% rule which will be at least 4
+				const maxAllowedDifference = clamp(4, 100, Math.floor(minMoveCount * 0.2));
+
+				// After this move, current board will have one more move
+				const projectedMoveCount = currentMoveCount + 1;
+				const projectedDifference = projectedMoveCount - otherMoveCount;
+
+				// If this board would be too far ahead, block the move
+				if (projectedDifference > maxAllowedDifference) {
+					return json({
+						error: `This board is ahead by ${currentMoveCount - otherMoveCount} moves. Must wait for the other board to make a move. (Max allowed difference: ${maxAllowedDifference} moves)`,
+						waitingForOtherBoard: true
+					}, { status: 403 });
+				}
+			}
 		}
 
 		// Validate and execute the move using chess.js
