@@ -27,9 +27,70 @@
   let boardContainer: HTMLDivElement;
   let board: Chessboard;
   let chess: Chess;
+  let capturedPieces: { white: string[]; black: string[] } = {
+    white: [],
+    black: [],
+  };
 
   $: isMyTurn = currentUserId === currentTurnUserId;
-  // Set orientation based on which color the current user is playing
+
+  // Calculate captured pieces from the current position
+  function calculateCapturedPieces(fen: string) {
+    // Starting material count
+    const startingMaterial: { [key: string]: number } = {
+      p: 8, n: 2, b: 2, r: 2, q: 1, k: 1,
+      P: 8, N: 2, B: 2, R: 2, Q: 1, K: 1,
+    };
+
+    // Count current pieces on board
+    const currentMaterial: { [key: string]: number } = {};
+    const position = fen.split(" ")[0]; // Get position part of FEN
+
+    for (const char of position) {
+      if (char !== "/" && isNaN(parseInt(char))) {
+        currentMaterial[char] = (currentMaterial[char] || 0) + 1;
+      }
+    }
+
+    // Calculate captured pieces
+    const captured = { white: [] as string[], black: [] as string[] };
+
+    for (const [piece, startCount] of Object.entries(startingMaterial)) {
+      const currentCount = currentMaterial[piece] || 0;
+      const capturedCount = startCount - currentCount;
+
+      if (capturedCount > 0) {
+        // Lowercase = black piece, captured by white
+        // Uppercase = white piece, captured by black
+        const isBlackPiece = piece === piece.toLowerCase();
+        const capturedBy = isBlackPiece ? "white" : "black";
+
+        for (let i = 0; i < capturedCount; i++) {
+          captured[capturedBy].push(piece.toLowerCase());
+        }
+      }
+    }
+
+    return captured;
+  }
+
+  // Update captured pieces when FEN changes
+  $: if (fen) {
+    capturedPieces = calculateCapturedPieces(fen);
+  }
+
+  // Convert piece letter to unicode symbol
+  function getPieceSymbol(piece: string): string {
+    const symbols: { [key: string]: string } = {
+      k: "♔",
+      q: "♕",
+      r: "♖",
+      b: "♗",
+      n: "♘",
+      p: "♙",
+    };
+    return symbols[piece.toLowerCase()] || piece;
+  }
 
   onMount(() => {
     chess = new Chess(fen);
@@ -155,7 +216,22 @@
       <div class="turn-indicator">Waiting for opponent...</div>
     {/if}
   </div>
+
+  <!-- Captured pieces by black (shown at top when white is at bottom) -->
+  <div class="captured-pieces top">
+    {#each capturedPieces.black as piece}
+      <span class="captured-piece white-piece">{getPieceSymbol(piece)}</span>
+    {/each}
+  </div>
+
   <div class="board-container" bind:this={boardContainer}></div>
+
+  <!-- Captured pieces by white (shown at bottom when white is at bottom) -->
+  <div class="captured-pieces bottom">
+    {#each capturedPieces.white as piece}
+      <span class="captured-piece black-piece">{getPieceSymbol(piece)}</span>
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -247,6 +323,41 @@
     width: 100%;
     max-width: 500px;
     margin: 0 auto;
+  }
+
+  .captured-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    min-height: 2.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    align-items: center;
+  }
+
+  .captured-pieces.top {
+    margin-bottom: 0.5rem;
+  }
+
+  .captured-pieces.bottom {
+    margin-top: 0.5rem;
+  }
+
+  .captured-piece {
+    font-size: 1.5rem;
+    line-height: 1;
+    transition: transform 0.2s;
+  }
+
+  .captured-piece.white-piece {
+    color: #f0f0f0;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  }
+
+  .captured-piece.black-piece {
+    color: #333;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
   }
 
   :global(.chess-board) {
