@@ -45,6 +45,7 @@
 
     // Handle input events (when user tries to move)
     board.enableMoveInput((event: any) => {
+      console.log(event);
       switch (event.type) {
         case INPUT_EVENT_TYPE.moveInputStarted:
           // Check if it's the player's turn

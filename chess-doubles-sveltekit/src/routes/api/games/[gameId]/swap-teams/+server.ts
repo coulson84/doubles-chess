@@ -58,14 +58,6 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 				.where({ id: targetPlayer.id })
 				.update({ team: draggedTeam });
 
-			// Also update the invitations table for non-creator players
-			await trx('game_invitations')
-				.where({ gameId, invitedUserId: draggedUserId, status: 'accepted' })
-				.update({ team: targetTeam });
-
-			await trx('game_invitations')
-				.where({ gameId, invitedUserId: targetUserId, status: 'accepted' })
-				.update({ team: draggedTeam });
 		});
 
 		return json({ success: true }, { status: 200 });

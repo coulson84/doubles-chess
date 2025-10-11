@@ -176,10 +176,13 @@
         {:else}
           <div class="games-list">
             {#each games as game}
-              <div class="game-card">
+              <div class="game-card" class:your-turn={game.isYourTurn}>
                 <div class="game-header">
                   <h3>Game {game.id.slice(0, 8)}</h3>
                   <div class="badges">
+                    {#if game.isYourTurn}
+                      <span class="role-badge your-turn-badge">Your Turn</span>
+                    {/if}
                     <span
                       class="status-badge"
                       style="background-color: {getStatusColor(game.status)}"
@@ -543,6 +546,16 @@
     border-color: #4285f4;
   }
 
+  .game-card.your-turn {
+    border-color: #ff9800;
+    background: #fff8e1;
+  }
+
+  .game-card.your-turn:hover {
+    border-color: #f57c00;
+    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.3);
+  }
+
   .game-header {
     display: flex;
     justify-content: space-between;
@@ -597,6 +610,22 @@
   .role-badge.public {
     background: #d4edda;
     color: #155724;
+  }
+
+  .role-badge.your-turn-badge {
+    background: #ff9800;
+    color: white;
+    font-weight: 700;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .game-details {
