@@ -472,13 +472,19 @@
           alert(
             `⏳ ${error.error}\n\nThis prevents one board from getting too far ahead.`
           );
+          throw new Error("Move rejected");
         } else {
           alert(error.error || "Invalid move");
+          throw new Error(error.error || "Move rejected");
         }
       }
     } catch (error) {
       console.error("Error making move:", error);
-      alert("An error occurred while making the move");
+      if (error instanceof Error && error.message !== "Move rejected") {
+        alert("An error occurred while making the move");
+      }
+      // Re-throw to trigger the catch handler in ChessBoard component
+      throw error;
     }
   }
 

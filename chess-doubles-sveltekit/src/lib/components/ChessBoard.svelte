@@ -86,8 +86,24 @@
           // Remove markers
           board.removeMarkers(MARKER_TYPE.dot);
 
-          // Make the move on the server
-          onMove(event.squareFrom, event.squareTo);
+          // Make the move locally first for optimistic UI
+          const localMove = chess.move({
+            from: event.squareFrom,
+            to: event.squareTo,
+            promotion: "q", // Always promote to queen for now
+          });
+
+          if (localMove) {
+            // Update the board position optimistically
+            board.setPosition(chess.fen());
+
+            // Make the move on the server
+            onMove(event.squareFrom, event.squareTo).catch(() => {
+              // If the server rejects the move, revert it
+              chess.undo();
+              board.setPosition(chess.fen());
+            });
+          }
           break;
       }
       return true;
