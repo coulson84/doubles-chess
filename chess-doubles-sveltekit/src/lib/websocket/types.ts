@@ -5,6 +5,7 @@ export type WebSocketEventType =
 	| 'game_started'
 	| 'game_updated'
 	| 'player_ejected'
+	| 'chess_move'
 	| 'friend_request_received'
 	| 'friend_request_accepted';
 
@@ -47,4 +48,11 @@ export interface FriendRequestPayload {
 export interface PlayerEjectedPayload {
 	gameId: string;
 	message: string;
+}
+
+export interface ChessMovePayload {
+	gameId: string;
+	boardId: string;
+	move: any;
+	fen: string;
 }

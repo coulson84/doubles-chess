@@ -31,18 +31,57 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 			return json({ error: 'Game is not ready to start' }, { status: 400 });
 		}
 
-		// Update game status to in progress
-		await db('games').where({ id: gameId }).update({
-			status: 'inProgress',
-			updatedAt: db.fn.now()
+		// Get all game players
+		const gamePlayers = await db('game_players')
+			.where({ gameId })
+			.select('*');
+
+		if (gamePlayers.length !== 4) {
+			return json({ error: 'Need exactly 4 players to start' }, { status: 400 });
+		}
+
+		// Separate players by team
+		const whitePlayers = gamePlayers.filter(p => p.team === 'white');
+		const blackPlayers = gamePlayers.filter(p => p.team === 'black');
+
+		if (whitePlayers.length !== 2 || blackPlayers.length !== 2) {
+			return json({ error: 'Each team must have exactly 2 players' }, { status: 400 });
+		}
+
+		// Update game status and create boards in a transaction
+		await db.transaction(async (trx) => {
+			// Update game status to in progress
+			await trx('games').where({ id: gameId }).update({
+				status: 'inProgress',
+				updatedAt: trx.fn.now()
+			});
+
+			// Create two boards with player pairings
+			// Board 1: White[0] vs Black[0]
+			await trx('game_boards').insert({
+				gameId,
+				boardNumber: 1,
+				whitePlayerId: whitePlayers[0].userId,
+				blackPlayerId: blackPlayers[0].userId,
+				currentTurnUserId: whitePlayers[0].userId, // White starts
+				fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+				moveHistory: []
+			});
+
+			// Board 2: White[1] vs Black[1]
+			await trx('game_boards').insert({
+				gameId,
+				boardNumber: 2,
+				whitePlayerId: whitePlayers[1].userId,
+				blackPlayerId: blackPlayers[1].userId,
+				currentTurnUserId: whitePlayers[1].userId, // White starts
+				fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+				moveHistory: []
+			});
 		});
 
-		// Get all accepted invitations to notify players
-		const acceptedInvites = await db('game_invitations')
-			.where({ gameId, status: 'accepted' })
-			.select('invitedUserId');
-
-		const playerIds = acceptedInvites.map((inv) => inv.invitedUserId);
+		// Get all player IDs for notifications
+		const playerIds = gamePlayers.map(p => p.userId);
 
 		// Send WebSocket notification to all players
 		const wsPayload: GameUpdatedPayload = {

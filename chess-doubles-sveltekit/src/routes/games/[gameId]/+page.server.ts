@@ -8,6 +8,10 @@ type Game = {
 	status: 'awaitingPlayers' | 'readyToStart' | 'inProgress' | 'complete';
 	createdAt: Date;
 	updatedAt: Date;
+	isPrivate: boolean;
+	timeLimitPerMove: number | null;
+	isRated: boolean;
+	teamAssignment: 'manual' | 'random';
 };
 
 type GameInvitation = {
@@ -23,6 +27,20 @@ type GameInvitation = {
 		name: string;
 		image: string | null;
 	};
+};
+
+type GameBoard = {
+	id: string;
+	gameId: string;
+	boardNumber: number;
+	whitePlayerId: string;
+	blackPlayerId: string;
+	fen: string;
+	moveHistory: any[];
+	currentTurnUserId: string;
+	lastMoveAt: Date;
+	createdAt: Date;
+	updatedAt: Date;
 };
 
 export const load: PageServerLoad = async (event) => {
@@ -113,12 +131,22 @@ export const load: PageServerLoad = async (event) => {
 			}
 		}));
 
+		// Load game boards if game is in progress
+		let gameBoards: GameBoard[] = [];
+		if (game.status === 'inProgress') {
+			gameBoards = await knex('game_boards')
+				.where({ gameId })
+				.orderBy('boardNumber', 'asc')
+				.select('*');
+		}
+
 		return {
 			session,
 			game: game as Game,
 			invitations: formattedInvitations,
 			myInvitation,
-			gamePlayers: formattedGamePlayers
+			gamePlayers: formattedGamePlayers,
+			gameBoards
 		};
 	} catch (err) {
 		if (err && typeof err === 'object' && 'status' in err) {

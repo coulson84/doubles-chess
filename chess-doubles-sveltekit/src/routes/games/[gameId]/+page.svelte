@@ -4,6 +4,7 @@
   import { wsClient } from "$lib/websocket/client";
   import { onMount, onDestroy } from "svelte";
   import type { GameInviteResponsePayload } from "$lib/websocket/types";
+  import ChessBoard from "$lib/components/ChessBoard.svelte";
 
   export let data: PageData;
 
@@ -13,6 +14,7 @@
   $: invitations = data.invitations || [];
   $: myInvitation = data.myInvitation;
   $: gamePlayers = data.gamePlayers || [];
+  $: gameBoards = data.gameBoards || [];
   $: totalPlayers = gamePlayers.length;
   $: isCreator = user?.id === game?.createdBy;
   // Determine if we should show lobby or game board
@@ -59,10 +61,31 @@
         }
       );
 
+      // Handle chess moves
+      const unsubChessMove = wsClient.on("chess_move", async (payload: any) => {
+        if (payload.gameId === game.id) {
+          console.log("Opponent made a move:", payload.move);
+          await invalidateAll();
+        }
+      });
+
+      // Handle game started
+      const unsubGameStarted = wsClient.on(
+        "game_started",
+        async (payload: any) => {
+          if (payload.gameId === game.id) {
+            console.log("Game has started!");
+            await invalidateAll();
+          }
+        }
+      );
+
       return () => {
         unsubAccepted();
         unsubDeclined();
         unsubEjected();
+        unsubChessMove();
+        unsubGameStarted();
       };
     }
   });
@@ -272,7 +295,10 @@
     timeLimitPerMove: null,
     isRated: false,
     teamAssignment: "manual" as "manual" | "random",
-  };
+  } as Pick<
+    typeof game,
+    "isPrivate" | "timeLimitPerMove" | "isRated" | "teamAssignment"
+  >;
 
   $: if (game) {
     // Update settings when game changes
@@ -444,6 +470,35 @@
       alert("An error occurred while assigning the team");
     } finally {
       assigningTeam = null;
+    }
+  }
+
+  // Handle chess moves
+  async function handleMove(
+    boardId: string,
+    from: string,
+    to: string,
+    promotion?: string
+  ) {
+    try {
+      const response = await fetch(
+        `/api/games/${game.id}/boards/${boardId}/move`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ from, to, promotion: promotion || "q" }),
+        }
+      );
+
+      if (response.ok) {
+        await invalidateAll();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Invalid move");
+      }
+    } catch (error) {
+      console.error("Error making move:", error);
+      alert("An error occurred while making the move");
     }
   }
 
@@ -857,12 +912,12 @@
           </div>
 
           <!-- Unassigned Players Section -->
-          {#if invitations.some((inv) => !inv.team && inv.status !== "declined")}
+          {#if invitations.some((inv) => inv.status !== "declined")}
             <div class="invited-section">
               <h3 class="invited-title">Invited Players</h3>
               <div class="invited-players">
                 <!-- invited players -->
-                {#each invitations.filter((inv) => !inv.team && inv.status !== "declined") as invitation}
+                {#each invitations.filter((inv) => inv.status !== "declined") as invitation}
                   <div
                     class="player-slot {invitation.status === 'accepted'
                       ? 'filled'
@@ -896,26 +951,6 @@
                         </div>
                       </div>
                     </div>
-                    {#if isCreator && invitation.status === "accepted" && game.teamAssignment === "manual" && game.status !== "inProgress" && game.status !== "complete"}
-                      <button
-                        class="assign-white-btn"
-                        on:click={() =>
-                          assignTeam(invitation.invitedUserId, "white")}
-                        disabled={assigningTeam === invitation.invitedUserId}
-                        title="Assign to White team"
-                      >
-                        ⚪
-                      </button>
-                      <button
-                        class="assign-black-btn"
-                        on:click={() =>
-                          assignTeam(invitation.invitedUserId, "black")}
-                        disabled={assigningTeam === invitation.invitedUserId}
-                        title="Assign to Black team"
-                      >
-                        ⚫
-                      </button>
-                    {/if}
                     {#if isCreator && game.status !== "inProgress" && game.status !== "complete"}
                       <button
                         class="eject-btn"
@@ -1027,11 +1062,51 @@
       </div>
     </div>
   {:else if game.status === "inProgress"}
-    <!-- Game Board View (placeholder) -->
-    <div class="game-view">
-      <h1>Chess Doubles - Game In Progress</h1>
-      <p>Game board coming soon...</p>
-      <button class="btn-secondary" on:click={goHome}>← Back to Home</button>
+    <!-- Game Board View -->
+    <div class="game-view in-progress">
+      <div class="game-header">
+        <h1>Chess Doubles - In Progress</h1>
+        <button class="btn-secondary" on:click={goHome}>← Back to Home</button>
+      </div>
+
+      {#if gameBoards && gameBoards.length > 0}
+        <div class="boards-container">
+          {#each gameBoards as board}
+            {@const whitePlayer = gamePlayers.find(
+              (p) => p.userId === board.whitePlayerId
+            )}
+            {@const blackPlayer = gamePlayers.find(
+              (p) => p.userId === board.blackPlayerId
+            )}
+            {#if whitePlayer && blackPlayer}
+              <ChessBoard
+                boardId={board.id}
+                boardNumber={board.boardNumber}
+                fen={board.fen}
+                whitePlayer={{
+                  id: whitePlayer.userId,
+                  name: whitePlayer.user.name,
+                }}
+                blackPlayer={{
+                  id: blackPlayer.userId,
+                  name: blackPlayer.user.name,
+                }}
+                currentTurnUserId={board.currentTurnUserId}
+                currentUserId={user?.id || ""}
+                onMove={async (from, to, promotion) =>
+                  await handleMove(board.id, from, to, promotion)}
+              />
+            {/if}
+          {/each}
+        </div>
+      {:else}
+        <div class="no-boards">
+          <p>Game boards are being set up...</p>
+          <p class="error-note">
+            This game was started before the chess board system was implemented.
+          </p>
+        </div>
+      {/if}
     </div>
   {:else if game.status === "complete"}
     <!-- Completed Game View (placeholder) -->
@@ -1526,36 +1601,6 @@
     justify-content: center;
     transition: all 0.2s;
     flex-shrink: 0;
-  }
-
-  .assign-white-btn {
-    border-color: #666;
-  }
-
-  .assign-white-btn:hover:not(:disabled) {
-    background: #f0f0f0;
-    transform: scale(1.1);
-  }
-
-  .assign-black-btn {
-    border-color: #333;
-    background: #333;
-  }
-
-  .assign-black-btn:hover:not(:disabled) {
-    background: #444;
-    transform: scale(1.1);
-  }
-
-  .assign-white-btn:disabled,
-  .assign-black-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .creator-status {
-    color: #667eea;
-    font-weight: 600;
   }
 
   .player-slot {
@@ -2109,5 +2154,55 @@
 
   .settings-btn:hover {
     background: #e0e0e0;
+  }
+
+  /* Game Board View Styles */
+  .game-view.in-progress {
+    min-height: 100vh;
+  }
+
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .game-header h1 {
+    margin: 0;
+  }
+
+  .boards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 2rem;
+    justify-items: center;
+  }
+
+  @media (max-width: 768px) {
+    .boards-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .no-boards {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+  }
+
+  .no-boards p {
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0.5rem 0;
+  }
+
+  .error-note {
+    font-size: 0.9rem !important;
+    color: #999 !important;
+    font-style: italic;
   }
 </style>
