@@ -1,5 +1,5 @@
 import type { Adapter, AdapterUser, AdapterAccount, AdapterSession, VerificationToken } from '@auth/core/adapters';
-import type { Pool } from 'pg';
+import type { Pool } from '../../node_modules/@types/pg';
 
 /**
  * Custom PostgreSQL adapter for Auth.js that uses UUID v7 for primary keys

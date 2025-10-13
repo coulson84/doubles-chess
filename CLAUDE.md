@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chess Doubles is a web application built with SvelteKit featuring Google OAuth authentication. The app provides a secure authentication flow with a clean, modern user interface that adapts based on the user's login state.
+A web application built with SvelteKit featuring Google OAuth authentication. The app provides a secure authentication flow with a clean, modern user interface that adapts based on the user's login state.
 
 ## Architecture
 
@@ -21,7 +21,7 @@ Chess Doubles is a web application built with SvelteKit featuring Google OAuth a
 ### Project Structure
 
 ```
-chess-doubles-sveltekit/
+game-sveltekit/
 ├── src/
 │   ├── routes/
 │   │   ├── auth/
@@ -72,19 +72,21 @@ The app includes a comprehensive web push notification system for real-time user
 #### Architecture
 
 1. **Service Worker** (`src/service-worker.js`):
+
    - Handles push events from the server
    - Displays notifications to users
    - Manages notification clicks and navigation
    - Auto-registered by SvelteKit in production builds
 
 2. **Push Subscription Management**:
+
    - Users can subscribe/unsubscribe to notifications
    - Subscriptions stored in `push_subscriptions` table
    - Automatic cleanup of expired subscriptions
    - Uses Web Push API with VAPID authentication
 
 3. **Notification Types**:
-   - `game_invite` - User invited to a chess game
+   - `game_invite` - User invited to a game
    - `game_move` - Opponent made a move (user's turn)
    - `friend_request` - New friend request received
    - `game_started` - Game has started
@@ -93,16 +95,19 @@ The app includes a comprehensive web push notification system for real-time user
 #### Implementation
 
 **Server-Side** (`src/lib/notifications/`):
+
 - `push.server.ts` - Core push notification sending logic with VAPID
 - `game-notifications.server.ts` - Game-specific notification helpers
 - `types.ts` - TypeScript definitions for notifications
 
 **Client-Side**:
+
 - `client.ts` - Browser notification permission and subscription
 - `NotificationPrompt.svelte` - Dismissable popup for permission (production only)
 - Automatic service worker registration in production
 
 **API Endpoints**:
+
 - `POST /api/notifications/subscribe` - Subscribe to push notifications
 - `DELETE /api/notifications/subscribe` - Unsubscribe from notifications
 - `GET /api/notifications/vapid-public-key` - Get public VAPID key
@@ -110,25 +115,28 @@ The app includes a comprehensive web push notification system for real-time user
 #### Usage Examples
 
 **Send game invitation notification:**
+
 ```typescript
-import { notifyGameInvite } from '$lib/notifications/game-notifications.server';
+import { notifyGameInvite } from "$lib/notifications/game-notifications.server";
 
 await notifyGameInvite(gameId, invitedUserId, inviterName);
 ```
 
 **Send move notification:**
+
 ```typescript
-import { notifyGameMove } from '$lib/notifications/game-notifications.server';
+import { notifyGameMove } from "$lib/notifications/game-notifications.server";
 
 await notifyGameMove(gameId, [player1Id, player2Id], movedByName);
 ```
 
 **Invite user to game (includes notification):**
+
 ```typescript
 const response = await fetch(`/api/games/${gameId}/invite`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ userId: invitedUserId })
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ userId: invitedUserId }),
 });
 ```
 
@@ -187,7 +195,7 @@ VAPID_SUBJECT=mailto:your@email.com
 4. **verification_token** - Email verification tokens (composite primary key)
 5. **push_subscriptions** - Web push notification subscriptions per user
 6. **game_invitations** - Game invitation tracking (pending, accepted, declined)
-7. **games** - Chess game state and metadata
+7. **games** - game state and metadata
 8. **friends** - Friend relationships between users
 
 ## Essential Commands
@@ -198,12 +206,43 @@ VAPID_SUBJECT=mailto:your@email.com
 # Install dependencies (requires Node 22.x)
 npm install
 
-# Start development server
+# Start full development environment with Tilt (recommended)
+tilt up
+
+# OR start development server manually
 npm run dev
 
 # Start with auto-open browser
 npm run dev -- --open
 ```
+
+#### Tilt Development Environment
+
+The project uses [Tilt](https://tilt.dev) to orchestrate the full development stack. The `Tiltfile` at the repository root manages:
+
+- **PostgreSQL** (port 5435) - Database server from docker-compose
+- **MailDev** (ports 1080/1025) - Email testing UI and SMTP server from docker-compose
+- **SvelteKit Dev Server** (port 5173) - The main application
+
+**Using Tilt:**
+
+```bash
+# Start all services
+tilt up
+
+# Access Tilt UI for logs and service monitoring
+# Automatically opens at http://localhost:10350
+
+# Stop all services
+tilt down
+```
+
+The Tilt UI provides:
+
+- Real-time logs for all services
+- Quick links to app and infrastructure UIs
+- Service health status
+- Resource usage monitoring
 
 ### Building
 
@@ -370,13 +409,19 @@ npx knex seed:run
 ### Starting Development
 
 1. Ensure Node 22.x is active: `fnm use 22`
-2. Install dependencies if not already done: `npm install`
-3. Ensure PostgreSQL is running locally
-4. Create database: `createdb chess_doubles` (or your chosen DB_NAME)
-5. Ensure `.env` file has all required variables (auth + database)
-6. Run database migrations: `npx knex migrate:latest`
-7. Run dev server: `npm run dev`
-8. App available at `http://localhost:5173`
+2. Install dependencies if not already done: `npm install` (from game-sveltekit directory)
+3. Ensure `.env` file has all required variables (auth + database)
+4. Start development environment: `tilt up` (from repository root)
+   - This automatically starts PostgreSQL, MailDev, and the SvelteKit dev server
+   - Tilt UI opens at `http://localhost:10350` for monitoring
+5. Create database (first time only): `createdb -h localhost -p 5435 -U postgres game_dev`
+6. Run database migrations: `cd game-sveltekit && npx knex migrate:latest`
+7. App available at `http://localhost:5173`
+
+**Alternative without Tilt:**
+
+1. Start Docker services: `docker-compose up -d` (from repository root)
+2. Start dev server: `cd game-sveltekit && npm run dev`
 
 ### Making Changes
 
@@ -443,7 +488,7 @@ npx knex seed:run
 - Additional OAuth providers (GitHub, Discord, etc.)
 - Role-based access control
 - Email verification flow
-- Game state persistence (chess games)
+- Game state persistence
 - Real-time multiplayer with WebSockets
 
 ### Code Quality

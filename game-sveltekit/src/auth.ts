@@ -3,15 +3,15 @@ import Google from '@auth/core/providers/google';
 import Credentials from '@auth/core/providers/credentials';
 import { AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_SECRET } from '$env/static/private';
 import PostgresUUIDAdapter from './lib/auth-adapter.js';
-import { Pool } from "pg"
 import { DATABASE_HOST, DATABASE_NAME, DATABASE_PASSWORD, DATABASE_PORT, DATABASE_USER } from './lib/env.server.js';
 import bcrypt from 'bcryptjs';
+import { Pool } from 'pg';
 
 const pool = new Pool({
   host: DATABASE_HOST || "localhost",
   user: DATABASE_USER || "postgres",
   password: DATABASE_PASSWORD || "postgres",
-  database: DATABASE_NAME || "chess_doubles_dev",
+  database: DATABASE_NAME || "game_dev",
   port: DATABASE_PORT,
   max: 20,
   idleTimeoutMillis: 30000,

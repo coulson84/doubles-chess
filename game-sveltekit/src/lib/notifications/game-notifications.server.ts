@@ -22,7 +22,7 @@ export async function notifyGameInvite(
 		const notification: ChessNotification = {
 			type: 'game_invite',
 			title: 'New Game Invitation!',
-			body: `${inviterName} has invited you to a chess game`,
+			body: `${inviterName} has invited you to a game`,
 			icon: '/favicon.svg',
 			data: {
 				url: `/games/${gameId}`,

@@ -18,6 +18,7 @@ A modern web application built with SvelteKit featuring Google OAuth authenticat
 ## Setup
 
 1. **Install dependencies:**
+
    ```bash
    npm install
    ```
@@ -53,7 +54,7 @@ The app will be available at [http://localhost:5173](http://localhost:5173)
 ## Project Structure
 
 ```
-chess-doubles-sveltekit/
+game-sveltekit/
 ├── src/
 │   ├── routes/
 │   │   ├── +page.svelte          # Main landing page with auth UI
@@ -67,12 +68,14 @@ chess-doubles-sveltekit/
 ## How It Works
 
 1. **Authentication Flow:**
+
    - Users land on the homepage in a logged-out state
    - Clicking "Sign in with Google" initiates OAuth flow
    - After successful authentication, user data is stored in session
    - The UI automatically switches to show the logged-in dashboard
 
 2. **Session Management:**
+
    - Auth.js handles all authentication logic
    - Sessions are managed server-side
    - User data is securely passed to the client via `+page.server.ts`

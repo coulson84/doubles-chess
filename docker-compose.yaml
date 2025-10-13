@@ -3,10 +3,10 @@ version: "3.8"
 services:
   postgres:
     image: postgres:18-alpine3.22
-    container_name: chess-doubles-postgres
+    container_name: game-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: chess_doubles_dev
+      POSTGRES_DB: game_dev
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       PGDATA: /var/lib/postgresql/18/docker
@@ -16,9 +16,9 @@ services:
     ports:
       - "5435:5432"
     volumes:
-      - postgres18_data:/var/lib/postgresql
+      - postgres18_game_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d chess_doubles_dev"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d game_dev"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -26,15 +26,15 @@ services:
 
   maildev:
     image: maildev/maildev
-    container_name: chess-doubles-maildev
+    container_name: game-maildev
     restart: unless-stopped
     ports:
-      - "1080:1080"  # Web UI
-      - "1025:1025"  # SMTP server
+      - "1080:1080" # Web UI
+      - "1025:1025" # SMTP server
     environment:
       - MAILDEV_WEB_PORT=1080
       - MAILDEV_SMTP_PORT=1025
 
 volumes:
-  postgres18_data:
+  postgres18_game_data:
     driver: local

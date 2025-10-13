@@ -32,7 +32,7 @@ export interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
-	const from = env.SMTP_FROM || 'Chess Doubles <noreply@chessdoubles.com>';
+	const from = env.SMTP_FROM || 'Chess Doubles <noreply@gamedev.com>';
 
 	try {
 		await transporter.sendMail({

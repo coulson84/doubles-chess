@@ -168,8 +168,8 @@
       <h1>Welcome to Chess Doubles</h1>
       <p>Sign in or create an account to start playing</p>
 
-      <div class="chess-battle">
-        <img src="/title_image.jpg" alt="Chess Battle" />
+      <div class="game-title-image">
+        <img src="/title_image.jpg" alt="Game Title" />
       </div>
 
       <a href="/auth" class="auth-btn"> Get Started </a>
@@ -204,13 +204,13 @@
     margin-bottom: 3rem;
   }
 
-  .chess-battle {
+  .game-title-image {
     margin: 3rem auto;
     max-width: 500px;
     padding: 2rem;
   }
 
-  .chess-battle img {
+  .game-title-image img {
     width: 100%;
     height: auto;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
