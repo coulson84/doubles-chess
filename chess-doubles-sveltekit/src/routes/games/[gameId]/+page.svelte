@@ -446,6 +446,85 @@
     }
   }
 
+  // Get teammate's captured pieces for the current user's board
+  function getTeammateCapturedPieces(board: any): string[] {
+    if (!user?.id) return [];
+
+    // Find the other board (teammate's board)
+    const otherBoard = gameBoards.find((b) => b.id !== board.id);
+    if (!otherBoard) return [];
+
+    // Determine which team the current user is on
+    const userTeam = board.whitePlayerId === user.id ? "white" : "black";
+
+    // Calculate captured pieces from the other board
+    const startingMaterial: { [key: string]: number } = {
+      p: 8, n: 2, b: 2, r: 2, q: 1,
+      P: 8, N: 2, B: 2, R: 2, Q: 1,
+    };
+
+    const currentMaterial: { [key: string]: number } = {};
+    const position = otherBoard.fen.split(" ")[0];
+
+    for (const char of position) {
+      if (char !== "/" && isNaN(parseInt(char))) {
+        currentMaterial[char] = (currentMaterial[char] || 0) + 1;
+      }
+    }
+
+    const capturedByTeammate: string[] = [];
+    for (const [piece, startCount] of Object.entries(startingMaterial)) {
+      const currentCount = currentMaterial[piece] || 0;
+      const capturedCount = startCount - currentCount;
+
+      if (capturedCount > 0) {
+        const isBlackPiece = piece === piece.toLowerCase();
+        const capturedBy = isBlackPiece ? "white" : "black";
+
+        // Only include pieces captured by teammate's side (same team)
+        if (capturedBy === userTeam) {
+          for (let i = 0; i < capturedCount; i++) {
+            capturedByTeammate.push(piece.toLowerCase());
+          }
+        }
+      }
+    }
+
+    return capturedByTeammate;
+  }
+
+  // Handle piece placement
+  async function handlePiecePlacement(
+    boardId: string,
+    piece: string,
+    square: string
+  ) {
+    try {
+      const response = await fetch(
+        `/api/games/${game.id}/boards/${boardId}/place-piece`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ piece, square }),
+        }
+      );
+
+      if (response.ok) {
+        await invalidateAll();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Invalid piece placement");
+        throw new Error(error.error || "Placement rejected");
+      }
+    } catch (error) {
+      console.error("Error placing piece:", error);
+      if (error instanceof Error && error.message !== "Placement rejected") {
+        alert("An error occurred while placing the piece");
+      }
+      throw error;
+    }
+  }
+
   // Handle chess moves
   async function handleMove(
     boardId: string,
@@ -1100,6 +1179,7 @@
             {@const boardTitle = isUserBoard
               ? "Your Board"
               : "Teammate's Board"}
+            {@const teammateCapturedPieces = isUserBoard ? getTeammateCapturedPieces(board) : []}
             {#if whitePlayer && blackPlayer}
               <ChessBoard
                 boardId={board.id}
@@ -1121,8 +1201,11 @@
                 )?.user ?? null}
                 currentTurnUserId={board.currentTurnUserId}
                 currentUserId={user?.id || ""}
+                {teammateCapturedPieces}
                 onMove={async (from, to, promotion) =>
                   await handleMove(board.id, from, to, promotion)}
+                onPiecePlacement={async (piece, square) =>
+                  await handlePiecePlacement(board.id, piece, square)}
               />
             {/if}
           {/each}
