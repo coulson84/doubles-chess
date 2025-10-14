@@ -2,14 +2,38 @@
   import { SignOut } from "@auth/sveltekit/components";
   import type { PageData } from "./$types";
   import NotificationPrompt from "$lib/components/NotificationPrompt.svelte";
+  import { goto } from "$app/navigation";
 
   export let data: PageData;
 
   $: session = data.session;
   $: user = session?.user;
 
-  function formatDate(date: string | Date): string {
-    return new Date(date).toLocaleString();
+  let isCreatingGame = false;
+
+  async function createNewGame() {
+    isCreatingGame = true;
+    try {
+      const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create game');
+      }
+
+      const { game } = await response.json();
+      // Navigate to the game page
+      goto(`/game/${game.id}`);
+    } catch (error) {
+      console.error('Error creating game:', error);
+      alert('Failed to create game. Please try again.');
+    } finally {
+      isCreatingGame = false;
+    }
   }
 </script>
 
@@ -34,6 +58,17 @@
         <h2>Your Profile</h2>
         <p><strong>Name:</strong> {user.name}</p>
         <p><strong>Email:</strong> {user.email}</p>
+      </div>
+
+      <div class="game-section">
+        <h2>Ready to Play?</h2>
+        <button
+          on:click={createNewGame}
+          disabled={isCreatingGame}
+          class="start-game-btn"
+        >
+          {isCreatingGame ? 'Creating Game...' : 'Start New Game'}
+        </button>
       </div>
 
       <div class="content"></div>
@@ -143,6 +178,42 @@
 
   .content {
     margin-bottom: 2rem;
+  }
+
+  .game-section {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .game-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #333;
+    font-size: 1.75rem;
+  }
+
+  .start-game-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 500;
+  }
+
+  .start-game-btn:hover:not(:disabled) {
+    background: #5568d3;
+  }
+
+  .start-game-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   /* Button Styles */
