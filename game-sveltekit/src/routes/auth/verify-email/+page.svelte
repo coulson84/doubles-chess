@@ -1,18 +1,21 @@
 <script lang="ts">
-  import type { PageData } from './$types';
+  import type { PageData } from "./$types";
 
   export let data: PageData;
 </script>
 
 <div class="verify-container">
   <div class="verify-card">
-    <h1>Chess Doubles</h1>
+    <h1>XXGAMEXX</h1>
 
     {#if data.success}
       <div class="success-message">
         <div class="icon">✓</div>
         <h2>Email Verified!</h2>
-        <p>Your email has been successfully verified. You can now sign in to your account.</p>
+        <p>
+          Your email has been successfully verified. You can now sign in to your
+          account.
+        </p>
         <a href="/auth" class="btn-primary">Go to Sign In</a>
       </div>
     {:else if data.error}

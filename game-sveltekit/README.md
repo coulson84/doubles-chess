@@ -1,4 +1,4 @@
-# Chess Doubles SvelteKit App
+# SvelteKit App
 
 A modern web application built with SvelteKit featuring Google OAuth authentication.
 

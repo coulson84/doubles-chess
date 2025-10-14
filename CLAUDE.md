@@ -31,8 +31,6 @@ game-sveltekit/
 │   │   │   ├── notifications/
 │   │   │   │   ├── subscribe/+server.ts        # Subscribe to push notifications
 │   │   │   │   └── vapid-public-key/+server.ts # Get VAPID public key
-│   │   │   ├── games/[gameId]/invite/+server.ts # Send game invitations
-│   │   │   └── invitations/[id]/respond/+server.ts # Accept/decline invitations
 │   │   ├── +page.svelte          # Main landing page with auth UI
 │   │   ├── +page.server.ts       # Server-side session loading
 │   │   └── +layout.svelte        # Root layout component
@@ -86,7 +84,6 @@ The app includes a comprehensive web push notification system for real-time user
    - Uses Web Push API with VAPID authentication
 
 3. **Notification Types**:
-   - `game_invite` - User invited to a game
    - `game_move` - Opponent made a move (user's turn)
    - `friend_request` - New friend request received
    - `game_started` - Game has started
@@ -113,32 +110,6 @@ The app includes a comprehensive web push notification system for real-time user
 - `GET /api/notifications/vapid-public-key` - Get public VAPID key
 
 #### Usage Examples
-
-**Send game invitation notification:**
-
-```typescript
-import { notifyGameInvite } from "$lib/notifications/game-notifications.server";
-
-await notifyGameInvite(gameId, invitedUserId, inviterName);
-```
-
-**Send move notification:**
-
-```typescript
-import { notifyGameMove } from "$lib/notifications/game-notifications.server";
-
-await notifyGameMove(gameId, [player1Id, player2Id], movedByName);
-```
-
-**Invite user to game (includes notification):**
-
-```typescript
-const response = await fetch(`/api/games/${gameId}/invite`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ userId: invitedUserId }),
-});
-```
 
 #### Development vs Production
 
@@ -194,9 +165,8 @@ VAPID_SUBJECT=mailto:your@email.com
 3. **sessions** - Active user sessions with expiration
 4. **verification_token** - Email verification tokens (composite primary key)
 5. **push_subscriptions** - Web push notification subscriptions per user
-6. **game_invitations** - Game invitation tracking (pending, accepted, declined)
-7. **games** - game state and metadata
-8. **friends** - Friend relationships between users
+6. **games** - game state and metadata
+7. **friends** - Friend relationships between users
 
 ## Essential Commands
 

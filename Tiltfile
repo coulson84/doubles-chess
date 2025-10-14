@@ -1,4 +1,4 @@
-# Tiltfile for Chess Doubles development environment
+# Tiltfile for game development environment
 
 # Load the docker-compose.yaml file to manage PostgreSQL and MailDev
 docker_compose('./docker-compose.yaml')

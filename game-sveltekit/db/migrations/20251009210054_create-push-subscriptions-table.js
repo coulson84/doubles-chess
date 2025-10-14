@@ -4,7 +4,7 @@
  */
 export async function up(knex) {
 	await knex.schema.createTable('push_subscriptions', (table) => {
-		table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+		table.uuid('id').primary().defaultTo(knex.raw('uuidv7()'));
 		table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
 		table.text('endpoint').notNullable();
 		table.text('p256dh').notNullable();
